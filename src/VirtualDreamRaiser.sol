@@ -42,9 +42,11 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
     error VDR__NotDreamCreator();
     error VDR__ZeroAmount();
     error VDR__InvalidAmountCheckBalance();
+    error VDR__UpkeepNotNeeded();
 
     /// @dev Variables
     uint256 private s_totalDreams;
+    uint256 private s_VirtualDreamRaiserBalance;
     uint256 private immutable i_interval;
     uint256 private immutable i_lastTimeStamp;
 
@@ -67,12 +69,15 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
     mapping(uint256 => Dream) private s_dreams;
 
     /// @dev Events
-    event WalletRemovedFromWhiteList(address indexed wallet);
     event DreamCreated(uint256 indexed target, string desc, uint256 indexed exp, address indexed wallet);
     event DreamPromoted(uint256 indexed id);
-    event DreamEnded(uint256 indexed id);
+    event DreamExpired(uint256 indexed id);
     event DreamFunded(uint256 indexed id, uint256 indexed amount);
     event DreamRealized(uint256 indexed id, uint256 indexed amount);
+    event WalletAddedToWhiteList(address wallet);
+    event WalletRemovedFromWhiteList(address indexed wallet);
+    event VirtualDreamRaiserFunded(uint256 amount);
+    event VirtualDreamRaiserWithdrawal(uint256 amount);
 
     constructor(uint256 interval, address owner) Ownable(owner) {
         i_interval = interval;
@@ -109,10 +114,10 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
 
     /// @notice Function, which will be called by Chainlink Keepers automatically always when dream event expire
     /// @param dreamId Unique identifier of dream
-    function endDream(uint256 dreamId) internal {
+    function expireDream(uint256 dreamId) internal {
         Dream storage dream = s_dreams[dreamId];
 
-        emit DreamEnded(dreamId);
+        emit DreamExpired(dreamId);
         dream.idToStatus = false;
     }
 
@@ -153,12 +158,28 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
     //////////////////////////////////// @notice Virtual Dream Raiser Functions ////////////////////////////////////
 
     /// @notice Function, which allow users to donate for VirtualDreamRaiser creators
-    function fundDreamers() external payable {}
+    function fundDreamers() external payable {
+        if (msg.value <= 0) revert VDR__ZeroAmount();
+
+        emit VirtualDreamRaiserFunded(msg.value);
+
+        s_VirtualDreamRaiserBalance += msg.value;
+    }
 
     /// @notice Function, which allow VirtualDreamRaiser creators to witdraw their donates
-    function withdrawDonates() external onlyOwner {}
+    function withdrawDonates() external onlyOwner {
+        if (s_VirtualDreamRaiserBalance <= 0) revert VDR__ZeroAmount();
+
+        emit VirtualDreamRaiserWithdrawal(s_VirtualDreamRaiserBalance);
+
+        (bool success, ) = owner().call{value: s_VirtualDreamRaiserBalance}("");
+        require(success, "Transfer Failed!");
+        s_VirtualDreamRaiserBalance = 0;
+    }
 
     function addToWhiteList(address organizationWallet) external onlyOwner {
+        emit WalletAddedToWhiteList(organizationWallet);
+
         s_walletsWhiteList.push(organizationWallet);
     }
 
@@ -179,14 +200,39 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
     /// @param upkeepNeeded returns true or false depending on x conditions
     function checkUpkeep(bytes memory /* checkData */) public view override returns (bool upkeepNeeded, bytes memory /* performData */) {
         bool timePassed = ((block.timestamp - i_lastTimeStamp) > i_interval);
+        bool hasDreams = s_totalDreams > 0;
+        bool hasDreamsToExpire = false;
 
-        upkeepNeeded = (timePassed);
+        for (uint dreamId = 0; dreamId < s_totalDreams; dreamId++) {
+            Dream storage dream = s_dreams[dreamId];
+
+            if (dream.idToStatus == true) {
+                if (dream.idToTimeLeft < block.timestamp) {
+                    hasDreamsToExpire = true;
+                    break;
+                }
+            }
+        }
+
+        upkeepNeeded = (timePassed && hasDreams && hasDreamsToExpire);
 
         return (upkeepNeeded, "0x0");
     }
 
     /// @notice Once checkUpkeep() returns "true" this function is called to execute endDream() and calculateApproximateUsdValue() functions
-    function performUpkeep(bytes calldata /* performData */) external override {}
+    function performUpkeep(bytes calldata /* performData */) external override {
+        (bool upkeepNeeded, ) = checkUpkeep("");
+
+        if (!upkeepNeeded) revert VDR__UpkeepNotNeeded();
+
+        for (uint dreamId = 0; dreamId < s_totalDreams; dreamId++) {
+            Dream storage dream = s_dreams[dreamId];
+
+            if (dream.idToTimeLeft < block.timestamp) {
+                expireDream(dreamId);
+            }
+        }
+    }
 
     //////////////////////////////////// @notice Getters ////////////////////////////////////
 
