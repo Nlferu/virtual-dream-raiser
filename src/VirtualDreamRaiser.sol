@@ -12,7 +12,11 @@ pragma solidity ^0.8.22;
  * Automation
  */
 
-contract VirtualDreamRaiser {
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
+
+contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterface {
     /** @dev Essential Functions:
      * Create fund raising event with specified goal {amount}, {description}, {expirationDate}, {partnerOrganizationAuthorizedWallet}(no clause needed).
      *
@@ -33,10 +37,14 @@ contract VirtualDreamRaiser {
      * This project will be based on self trust, but organizations with confirmed wallets will be marked.
      */
 
+    /// @dev Variables
+    uint256 private immutable i_interval;
+    uint256 private immutable s_lastTimeStamp;
+
     /// @dev Structs
     struct Dream {
-        uint256 dreamId;
         uint256 idToTime;
+        uint256 idToGoal;
         uint256 idToAmount;
         string idToDescription;
         bool idToStatus;
@@ -50,29 +58,56 @@ contract VirtualDreamRaiser {
 
     /// @dev Events
 
-    function createDream(uint256 amount, string calldata description, uint256 expirationDate, address organizatorWallet) external {
-        /** @dev If given address will be on whiteList this dream will be featured */
+    constructor(uint256 interval, address owner) Ownable(owner) {
+        i_interval = interval;
+        s_lastTimeStamp = block.timestamp;
     }
 
-    function killDream(uint256 dreamId) internal {
-        /** @dev Function automatically called by Chainlink Keepers when event expire */
-    }
+    /// @notice Creating dream event, which will be gathering funds for dream realization
+    /// @param goal Target amount that creator of dream want to gather
+    /// @param description Description of dream, which people are funding
+    /// @param expiration Dream funds gathering period expressed in days
+    /// @param organizatorWallet Address of wallet, which will be able to withdraw donated funds
+    function createDream(uint256 goal, string calldata description, uint256 expiration, address organizatorWallet) external {}
 
-    function fundDream(uint256 dreamId, uint256 amount) external {
-        /** @dev Function, which allow users to donate for certain dream */
-    }
+    /// @notice Function, which will be called by Chainlink Keepers automatically always when dream event expire
+    /// @param dreamId Unique identifier of dream
+    function endDream(uint256 dreamId) internal {}
 
-    function fundDreamers(uint256 amount) external {
-        /** @dev Function designed to help us creators of this tool */
-    }
+    /// @notice Function, which allow users to donate for certain dream
+    /// @param dreamId Unique identifier of dream
+    /// @param amount Amount to be funded for certain dream
+    function fundDream(uint256 dreamId, uint256 amount) external {}
 
-    function realizeDream(uint256 dreamId, uint256 amount) external {
-        /** @dev Function, which allows creator of event to withdraw funds */
-    }
+    /// @notice Function, which allow users to donate for VirtualDreamRaiser creators
+    /// @param amount Amount to be funded for VirtualDreamRaiser creators
+    function fundDreamers(uint256 amount) external {}
 
+    /// @notice Function, which allow VirtualDreamRaiser creators to witdraw their donates
+    function withdrawDonates() external onlyOwner {}
+
+    /// @notice Function, which allows creator of dream event to withdraw funds
+    /// @param dreamId Unique identifier of dream
+    /// @param amount Amount to be funded for certain dream
+    function realizeDream(uint256 dreamId, uint256 amount) external {}
+
+    /// @notice Function, which will show calculated USD value of all gathered ETH based on Chainlink price feeds
     function calculateApproximateUsdValue() internal {
         /** @dev Chainlink Keepers should keep calling this once a day */
     }
 
-    function addToWhiteList(address organizationWallet) private {}
+    function addToWhiteList(address organizationWallet) private onlyOwner {}
+
+    /// @notice This is the function that the Chainlink Keeper nodes call to check if performing upkeep is needed
+    /// @param upkeepNeeded returns true or false depending on x conditions
+    function checkUpkeep(bytes memory /* checkData */) public view override returns (bool upkeepNeeded, bytes memory /* performData */) {
+        bool timePassed = ((block.timestamp - s_lastTimeStamp) > i_interval);
+
+        upkeepNeeded = (timePassed);
+
+        return (upkeepNeeded, "0x0");
+    }
+
+    /// @notice Once checkUpkeep() returns "true" this function is called to execute endDream() and calculateApproximateUsdValue() functions
+    function performUpkeep(bytes calldata /* performData */) external override {}
 }
