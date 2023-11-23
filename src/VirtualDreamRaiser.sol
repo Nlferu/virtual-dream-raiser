@@ -37,15 +37,22 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
      * This project will be based on self trust, but organizations with confirmed wallets will be marked.
      */
 
+    /// @dev Errors
+    error VDR__InvalidDream();
+    error VDR__NotDreamCreator();
+    error VDR__ZeroAmount();
+    error VDR__InvalidAmountCheckBalance();
+
     /// @dev Variables
-    uint256 private s_dreamId;
+    uint256 private s_totalDreams;
     uint256 private immutable i_interval;
     uint256 private immutable i_lastTimeStamp;
 
     /// @dev Structs
     struct Dream {
         address idToCreator;
-        uint256 idToTime;
+        address idToWallet;
+        uint256 idToTimeLeft;
         uint256 idToGoal;
         uint256 idToTotalGathered;
         uint256 idToBalance;
@@ -54,12 +61,18 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
         bool idToPromoted;
     }
 
-    address[] private walletsWhiteList;
+    address[] private s_walletsWhiteList;
 
     /// @dev Mappings
     mapping(uint256 => Dream) private s_dreams;
 
     /// @dev Events
+    event WalletRemovedFromWhiteList(address indexed wallet);
+    event DreamCreated(uint256 indexed target, string desc, uint256 indexed exp, address indexed wallet);
+    event DreamPromoted(uint256 indexed id);
+    event DreamEnded(uint256 indexed id);
+    event DreamFunded(uint256 indexed id, uint256 indexed amount);
+    event DreamRealized(uint256 indexed id, uint256 indexed amount);
 
     constructor(uint256 interval, address owner) Ownable(owner) {
         i_interval = interval;
@@ -72,31 +85,46 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
     /// @param expiration Dream funds gathering period expressed in days
     /// @param organizatorWallet Address of wallet, which will be able to withdraw donated funds
     function createDream(uint256 goal, string calldata description, uint256 expiration, address organizatorWallet) external {
-        Dream storage dream = s_dreams[s_dreamId];
+        Dream storage dream = s_dreams[s_totalDreams];
 
-        s_dreamId += 1;
+        emit DreamCreated(goal, description, expiration, organizatorWallet);
+
         dream.idToCreator = msg.sender;
-        dream.idToTime = expiration;
+        dream.idToWallet = organizatorWallet;
+        dream.idToTimeLeft = (block.timestamp + expiration);
         dream.idToGoal = goal;
         dream.idToDescription = description;
         dream.idToStatus = true;
 
-        for (uint wallets = 0; wallets < walletsWhiteList.length; wallets++) {
-            if (organizatorWallet == walletsWhiteList[wallets]) {
+        for (uint wallets = 0; wallets < s_walletsWhiteList.length; wallets++) {
+            if (organizatorWallet == s_walletsWhiteList[wallets]) {
+                emit DreamPromoted(s_totalDreams);
                 dream.idToPromoted = true;
                 break;
             }
         }
+
+        s_totalDreams += 1;
     }
 
     /// @notice Function, which will be called by Chainlink Keepers automatically always when dream event expire
     /// @param dreamId Unique identifier of dream
-    function endDream(uint256 dreamId) internal {}
+    function endDream(uint256 dreamId) internal {
+        Dream storage dream = s_dreams[dreamId];
+
+        emit DreamEnded(dreamId);
+        dream.idToStatus = false;
+    }
 
     /// @notice Function, which allow users to donate for certain dream
     /// @param dreamId Unique identifier of dream
     function fundDream(uint256 dreamId) external payable {
+        if (msg.value <= 0) revert VDR__ZeroAmount();
+        if (dreamId >= s_totalDreams) revert VDR__InvalidDream();
         Dream storage dream = s_dreams[dreamId];
+
+        emit DreamFunded(dreamId, msg.value);
+
         dream.idToTotalGathered += msg.value;
         dream.idToBalance += msg.value;
     }
@@ -106,14 +134,15 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
     /// @param amount Amount to be funded for certain dream
     function realizeDream(uint256 dreamId, uint256 amount) external {
         Dream storage dream = s_dreams[dreamId];
+        if (dreamId >= s_totalDreams) revert VDR__InvalidDream();
+        if (dream.idToCreator != msg.sender) revert VDR__NotDreamCreator();
+        if (dream.idToBalance == 0 || dream.idToBalance < amount) revert VDR__InvalidAmountCheckBalance();
 
-        if (dream.idToCreator == msg.sender) {
-            if (dream.idToBalance > 0 && dream.idToBalance >= amount) {
-                dream.idToBalance -= amount;
-                (bool success, ) = dream.idToCreator.call{value: amount}("");
-                require(success, "Transfer Failed!");
-            }
-        }
+        emit DreamRealized(dreamId, amount);
+
+        dream.idToBalance -= amount;
+        (bool success, ) = dream.idToWallet.call{value: amount}("");
+        require(success, "Transfer Failed!");
     }
 
     /// @notice Function, which will show calculated USD value of all gathered ETH based on Chainlink price feeds
@@ -124,13 +153,25 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
     //////////////////////////////////// @notice Virtual Dream Raiser Functions ////////////////////////////////////
 
     /// @notice Function, which allow users to donate for VirtualDreamRaiser creators
-    /// @param amount Amount to be funded for VirtualDreamRaiser creators
-    function fundDreamers(uint256 amount) external {}
+    function fundDreamers() external payable {}
 
     /// @notice Function, which allow VirtualDreamRaiser creators to witdraw their donates
     function withdrawDonates() external onlyOwner {}
 
-    function addToWhiteList(address organizationWallet) private onlyOwner {}
+    function addToWhiteList(address organizationWallet) external onlyOwner {
+        s_walletsWhiteList.push(organizationWallet);
+    }
+
+    function removeFromWhiteList(address organizationWallet) external onlyOwner {
+        for (uint i = 0; i < s_walletsWhiteList.length; i++) {
+            if (s_walletsWhiteList[i] == organizationWallet) {
+                emit WalletRemovedFromWhiteList(organizationWallet);
+                // Swapping wallet to be removed into last spot in array, so we can pop it and avoid getting 0 in array
+                s_walletsWhiteList[i] = s_walletsWhiteList[s_walletsWhiteList.length - 1];
+                s_walletsWhiteList.pop();
+            }
+        }
+    }
 
     //////////////////////////////////// @notice Chainlink Keepers Functions ////////////////////////////////////
 
@@ -148,4 +189,67 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
     function performUpkeep(bytes calldata /* performData */) external override {}
 
     //////////////////////////////////// @notice Getters ////////////////////////////////////
+
+    /** @dev Try to combine all getters into 1 function, which will return all of those (, , , ,x ,) */
+    function getTotalDreams() external view returns (uint256) {
+        return s_totalDreams;
+    }
+
+    function getCreator(uint256 dreamId) external view returns (address) {
+        Dream storage dream = s_dreams[dreamId];
+
+        return dream.idToCreator;
+    }
+
+    function getWithdrawWallet(uint256 dreamId) external view returns (address) {
+        Dream storage dream = s_dreams[dreamId];
+
+        return dream.idToWallet;
+    }
+
+    function getTimeLeft(uint256 dreamId) external view returns (uint256) {
+        Dream storage dream = s_dreams[dreamId];
+
+        return (dream.idToTimeLeft < block.timestamp) ? 0 : (dream.idToTimeLeft - block.timestamp);
+    }
+
+    function getGoal(uint256 dreamId) external view returns (uint256) {
+        Dream storage dream = s_dreams[dreamId];
+
+        return dream.idToGoal;
+    }
+
+    function getTotalGathered(uint256 dreamId) external view returns (uint256) {
+        Dream storage dream = s_dreams[dreamId];
+
+        return dream.idToTotalGathered;
+    }
+
+    function getDreamBalance(uint256 dreamId) external view returns (uint256) {
+        Dream storage dream = s_dreams[dreamId];
+
+        return dream.idToBalance;
+    }
+
+    function getDescription(uint256 dreamId) external view returns (string memory) {
+        Dream storage dream = s_dreams[dreamId];
+
+        return dream.idToDescription;
+    }
+
+    function getStatus(uint256 dreamId) external view returns (bool) {
+        Dream storage dream = s_dreams[dreamId];
+
+        return dream.idToStatus;
+    }
+
+    function getPromoted(uint256 dreamId) external view returns (bool) {
+        Dream storage dream = s_dreams[dreamId];
+
+        return dream.idToPromoted;
+    }
+
+    function getWhiteWalletsList() external view returns (address[] memory) {
+        return s_walletsWhiteList;
+    }
 }
