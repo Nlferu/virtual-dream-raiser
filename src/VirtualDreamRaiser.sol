@@ -38,11 +38,12 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
      */
 
     /// @dev Errors
-    error VDR__InvalidDream();
-    error VDR__NotDreamCreator();
     error VDR__ZeroAmount();
-    error VDR__InvalidAmountCheckBalance();
+    error VDR__InvalidDream();
+    error VDR__DreamExpired();
+    error VDR__NotDreamCreator();
     error VDR__UpkeepNotNeeded();
+    error VDR__InvalidAmountCheckBalance();
 
     /// @dev Variables
     uint256 private s_totalDreams;
@@ -124,9 +125,10 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
     /// @notice Function, which allow users to donate for certain dream
     /// @param dreamId Unique identifier of dream
     function fundDream(uint256 dreamId) external payable {
+        Dream storage dream = s_dreams[dreamId];
         if (msg.value <= 0) revert VDR__ZeroAmount();
         if (dreamId >= s_totalDreams) revert VDR__InvalidDream();
-        Dream storage dream = s_dreams[dreamId];
+        if (dream.idToStatus == false) revert VDR__DreamExpired();
 
         emit DreamFunded(dreamId, msg.value);
 
@@ -219,7 +221,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterfa
         return (upkeepNeeded, "0x0");
     }
 
-    /// @notice Once checkUpkeep() returns "true" this function is called to execute endDream() and calculateApproximateUsdValue() functions
+    /// @notice Once checkUpkeep() returns "true" this function is called to execute expireDream() and calculateApproximateUsdValue() functions
     function performUpkeep(bytes calldata /* performData */) external override {
         (bool upkeepNeeded, ) = checkUpkeep("");
 
