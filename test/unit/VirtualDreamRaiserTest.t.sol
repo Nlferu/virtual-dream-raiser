@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {Vm} from "forge-std/Vm.sol";
 import {Test, console} from "forge-std/Test.sol";
+import {StdCheats} from "forge-std/StdCheats.sol";
+import {VirtualDreamRaiser} from "../../src/VirtualDreamRaiser.sol";
+import {DeployVDR} from "../../script/DeployVDR.s.sol";
 
-contract VirtualDreamRaiserTest is Test {}
+contract VirtualDreamRaiserTest is StdCheats, Test {
+    address public PLAYER = makeAddr("player");
+    uint256 public constant STARTING_USER_BALANCE = 10 ether;
+}

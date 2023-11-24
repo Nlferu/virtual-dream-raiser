@@ -14,9 +14,9 @@ pragma solidity ^0.8.22;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
 
-contract VirtualDreamRaiser is Ownable, ReentrancyGuard, KeeperCompatibleInterface {
+contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInterface {
     /** @dev Essential Functions:
      * Create fund raising event with specified goal {amount}, {description}, {expirationDate}, {partnerOrganizationAuthorizedWallet}(no clause needed).
      *
