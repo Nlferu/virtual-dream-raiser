@@ -74,7 +74,7 @@ contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibl
         i_callbackGasLimit = callbackGasLimit;
     }
 
-    function updateVirtualDreamRewarder(address payable[] calldata newPlayers) external onlyOwner {
+    function updateVirtualDreamRewarder(address payable[] calldata newPlayers) external payable onlyOwner {
         for (uint i = 0; i < newPlayers.length; i++) {
             s_players.push(newPlayers[i]);
         }

@@ -55,7 +55,6 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     error VDR__NotDreamCreator();
     error VDR__UpkeepNotNeeded();
     error VDR__updateVDRewarderFailed();
-    error VDR__PrizePoolTransferFailed();
     error VDR__InvalidAmountCheckBalance();
 
     /// @dev Variables
@@ -95,7 +94,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     event WalletRemovedFromWhiteList(address indexed wallet);
     event VirtualDreamRaiserFunded(uint256 donate, uint256 indexed prize);
     event VirtualDreamRaiserWithdrawal(uint256 amount);
-    event VDRewarderPlayersUpdated(address payable[] donators);
+    event VDRewarderUpdated(address payable[] donators, uint256 amount);
 
     constructor(address owner, address rewarderAddress, uint256 interval) Ownable(owner) {
         i_VDRewarder = rewarderAddress;
@@ -143,12 +142,9 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     /// @notice Function, which will pass array of dreams funders and transfer prize pool to VirtualDreamRewarder contract
     /// @param virtualDreamRewarder VirtualDreamRewarder contract address, which will handle lottery for dreams funders
     function updateVDRewarder(address virtualDreamRewarder) internal {
-        (bool success, ) = virtualDreamRewarder.call(abi.encodeWithSignature("updateVirtualDreamRewarder(address[])", s_donators));
+        (bool success, ) = virtualDreamRewarder.call{value: s_prizePool}(abi.encodeWithSignature("updateVirtualDreamRewarder(address[])", s_donators));
         if (success) {
-            emit VDRewarderPlayersUpdated(s_donators);
-
-            (bool secondSuccess, ) = virtualDreamRewarder.call{value: s_prizePool}("");
-            if (!secondSuccess) revert VDR__PrizePoolTransferFailed();
+            emit VDRewarderUpdated(s_donators, s_prizePool);
 
             s_donators = new address payable[](0);
             s_prizePool = 0;
@@ -345,5 +341,13 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
 
     function getWhiteWalletsList() external view returns (address[] memory) {
         return s_walletsWhiteList;
+    }
+
+    function getPrizePool() external view returns (uint256) {
+        return s_prizePool;
+    }
+
+    function getNewPlayers() external view returns (address payable[] memory) {
+        return s_donators;
     }
 }
