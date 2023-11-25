@@ -8,14 +8,13 @@ import {AddConsumer, CreateSubscription, FundSubscription} from "./Interactions.
 
 contract DeployVDRewarder is Script {
     function run() external returns (VirtualDreamRewarder, HelperConfig, AddConsumer) {
-        HelperConfig helperConfig = new HelperConfig(); // This comes with our mocks!
+        HelperConfig helperConfig = new HelperConfig();
         AddConsumer addConsumer = new AddConsumer();
 
         (
             uint64 subscriptionId,
             bytes32 gasLane,
             uint256 automationUpdateInterval,
-            uint256 entranceFee,
             uint32 callbackGasLimit,
             address vrfCoordinatorV2,
             address link,
@@ -36,7 +35,6 @@ contract DeployVDRewarder is Script {
             subscriptionId,
             gasLane,
             automationUpdateInterval,
-            entranceFee,
             callbackGasLimit,
             vrfCoordinatorV2
         );

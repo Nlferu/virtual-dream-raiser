@@ -13,7 +13,7 @@ contract CreateSubscription is Script {
         // This script is picking correct vrfCoordinator contract address based on chainId and using it to create subscription
         HelperConfig helperConfig = new HelperConfig();
 
-        (, , , , , address vrfCoordinatorV2, , uint256 deployerKey) = helperConfig.activeNetworkConfig();
+        (, , , , address vrfCoordinatorV2, , uint256 deployerKey) = helperConfig.activeNetworkConfig();
 
         return createSubscription(vrfCoordinatorV2, deployerKey);
     }
@@ -41,7 +41,7 @@ contract AddConsumer is Script {
     function addConsumerUsingConfig(address mostRecentlyDeployed) public {
         HelperConfig helperConfig = new HelperConfig();
 
-        (uint64 subId, , , , , address vrfCoordinatorV2, , uint256 deployerKey) = helperConfig.activeNetworkConfig();
+        (uint64 subId, , , , address vrfCoordinatorV2, , uint256 deployerKey) = helperConfig.activeNetworkConfig();
 
         addConsumer(mostRecentlyDeployed, vrfCoordinatorV2, subId, deployerKey);
     }
@@ -70,7 +70,7 @@ contract FundSubscription is Script {
     function fundSubscriptionUsingConfig() public {
         HelperConfig helperConfig = new HelperConfig();
 
-        (uint64 subId, , , , , address vrfCoordinatorV2, address link, uint256 deployerKey) = helperConfig.activeNetworkConfig();
+        (uint64 subId, , , , address vrfCoordinatorV2, address link, uint256 deployerKey) = helperConfig.activeNetworkConfig();
 
         if (subId == 0) {
             CreateSubscription createSub = new CreateSubscription();
