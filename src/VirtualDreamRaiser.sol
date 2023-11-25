@@ -41,6 +41,8 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
      * @dev Add VRFCoordinatorV2 mechanic
      * Create array with funders
      * Add 2% from funded amounts to be added to prize pool
+     *
+     * function will be sending funds and list of participants to VDRewarder with performUpkeep()
      * Create function which will be returning those funders and resetting them after send and sending prize pool to lottery contract
      *
      */
@@ -49,13 +51,16 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     error VDR__ZeroAmount();
     error VDR__InvalidDream();
     error VDR__DreamExpired();
+    error VDR__TransferFailed();
     error VDR__NotDreamCreator();
     error VDR__UpkeepNotNeeded();
     error VDR__InvalidAmountCheckBalance();
 
     /// @dev Variables
     uint256 private s_totalDreams;
+    uint256 private s_prizeBalance;
     uint256 private s_VirtualDreamRaiserBalance;
+    address private immutable i_VDRewarder;
     uint256 private immutable i_interval;
     uint256 private immutable i_lastTimeStamp;
 
@@ -72,6 +77,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
         bool idToPromoted;
     }
 
+    address[] private s_donators;
     address[] private s_walletsWhiteList;
 
     /// @dev Mappings
@@ -81,14 +87,15 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     event DreamCreated(uint256 indexed target, string desc, uint256 indexed exp, address indexed wallet);
     event DreamPromoted(uint256 indexed id);
     event DreamExpired(uint256 indexed id);
-    event DreamFunded(uint256 indexed id, uint256 indexed amount);
+    event DreamFunded(uint256 indexed id, uint256 indexed donate, uint256 indexed prize);
     event DreamRealized(uint256 indexed id, uint256 indexed amount);
     event WalletAddedToWhiteList(address wallet);
     event WalletRemovedFromWhiteList(address indexed wallet);
-    event VirtualDreamRaiserFunded(uint256 amount);
+    event VirtualDreamRaiserFunded(uint256 donate, uint256 indexed prize);
     event VirtualDreamRaiserWithdrawal(uint256 amount);
 
-    constructor(uint256 interval, address owner) Ownable(owner) {
+    constructor(address rewarderAddress, uint256 interval, address owner) Ownable(owner) {
+        i_VDRewarder = rewarderAddress;
         i_interval = interval;
         i_lastTimeStamp = block.timestamp;
     }
@@ -130,6 +137,11 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
         dream.idToStatus = false;
     }
 
+    function updateVDRewarder(address virtualDreamRewarder) internal {
+        // call vdRewarder function to update array
+        // transfer prize funds
+    }
+
     /// @notice Function, which allow users to donate for certain dream
     /// @param dreamId Unique identifier of dream
     function fundDream(uint256 dreamId) external payable {
@@ -138,10 +150,15 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
         if (dreamId >= s_totalDreams) revert VDR__InvalidDream();
         if (dream.idToStatus == false) revert VDR__DreamExpired();
 
-        emit DreamFunded(dreamId, msg.value);
+        uint256 donation = (msg.value * 49) / 50;
+        uint256 prize = (msg.value * 1) / 50;
 
-        dream.idToTotalGathered += msg.value;
-        dream.idToBalance += msg.value;
+        emit DreamFunded(dreamId, donation, prize);
+
+        s_prizeBalance += prize;
+        s_donators.push(msg.sender);
+        dream.idToTotalGathered += donation;
+        dream.idToBalance += donation;
     }
 
     /// @notice Function, which allows creator of dream event to withdraw funds
@@ -157,7 +174,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
 
         dream.idToBalance -= amount;
         (bool success, ) = dream.idToWallet.call{value: amount}("");
-        require(success, "Transfer Failed!");
+        if (!success) revert VDR__TransferFailed();
     }
 
     /// @notice Function, which will show calculated USD value of all gathered ETH based on Chainlink price feeds
@@ -171,9 +188,13 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     function fundDreamers() external payable {
         if (msg.value <= 0) revert VDR__ZeroAmount();
 
-        emit VirtualDreamRaiserFunded(msg.value);
+        uint256 donation = (msg.value * 49) / 50;
+        uint256 prize = (msg.value * 1) / 50;
 
-        s_VirtualDreamRaiserBalance += msg.value;
+        emit VirtualDreamRaiserFunded(donation, prize);
+
+        s_prizeBalance += prize;
+        s_VirtualDreamRaiserBalance += donation;
     }
 
     /// @notice Function, which allow VirtualDreamRaiser creators to witdraw their donates
@@ -183,7 +204,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
         emit VirtualDreamRaiserWithdrawal(s_VirtualDreamRaiserBalance);
 
         (bool success, ) = owner().call{value: s_VirtualDreamRaiserBalance}("");
-        require(success, "Transfer Failed!");
+        if (!success) revert VDR__TransferFailed();
         s_VirtualDreamRaiserBalance = 0;
     }
 
@@ -240,6 +261,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
 
             if (dream.idToTimeLeft < block.timestamp) {
                 expireDream(dreamId);
+                updateVDRewarder(i_VDRewarder);
             }
         }
     }
