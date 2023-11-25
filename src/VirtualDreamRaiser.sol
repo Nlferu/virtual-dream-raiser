@@ -35,6 +35,14 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
      * Partners Authorized Wallets Array.
      *
      * This project will be based on self trust, but organizations with confirmed wallets will be marked.
+     *
+     *
+     *
+     * @dev Add VRFCoordinatorV2 mechanic
+     * Create array with funders
+     * Add 2% from funded amounts to be added to prize pool
+     * Create function which will be returning those funders and resetting them after send and sending prize pool to lottery contract
+     *
      */
 
     /// @dev Errors

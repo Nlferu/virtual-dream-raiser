@@ -7,6 +7,10 @@ import {StdCheats} from "forge-std/StdCheats.sol";
 import {VirtualDreamRaiser} from "../../src/VirtualDreamRaiser.sol";
 import {DeployVDR} from "../../script/DeployVDR.s.sol";
 
+// ⭐️ DEBUGGING -> import {console} from "forge-std/console.sol;"
+
+// Catch changes by emit's instead of getters
+
 contract VirtualDreamRaiserTest is StdCheats, Test {
     address public PLAYER = makeAddr("player");
     uint256 public constant STARTING_USER_BALANCE = 10 ether;
