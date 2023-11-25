@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
@@ -15,7 +16,11 @@ import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/inter
  * Automation
  */
 
-contract VirtualDreamRewarder is VRFConsumerBaseV2, AutomationCompatibleInterface {
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** @notice BEFORE USE: Call transferOwnership() from Ownable contract and set VirtualDreamRaiser contract as owner of this contract */
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibleInterface {
     /* Errors */
     error VirtualDreamRewarder__UpkeepNotNeeded(uint256 currentBalance, uint256 numPlayers, uint256 state);
     error VirtualDreamRewarder__TransferFailed();
@@ -51,13 +56,14 @@ contract VirtualDreamRewarder is VRFConsumerBaseV2, AutomationCompatibleInterfac
 
     /* Functions */
     constructor(
+        address owner,
         uint64 subscriptionId,
         bytes32 gasLane, // keyHash
         uint256 interval,
         uint256 entranceFee,
         uint32 callbackGasLimit,
         address vrfCoordinatorV2
-    ) VRFConsumerBaseV2(vrfCoordinatorV2) {
+    ) Ownable(owner) VRFConsumerBaseV2(vrfCoordinatorV2) {
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
         i_gasLane = gasLane;
         i_interval = interval;
@@ -66,6 +72,12 @@ contract VirtualDreamRewarder is VRFConsumerBaseV2, AutomationCompatibleInterfac
         s_state = VirtualDreamRewarderState.OPEN;
         s_lastTimeStamp = block.timestamp;
         i_callbackGasLimit = callbackGasLimit;
+    }
+
+    function updateVirtualDreamRewarder(address payable[] calldata newPlayers) external onlyOwner {
+        for (uint i = 0; i < newPlayers.length; i++) {
+            s_players.push(newPlayers[i]);
+        }
     }
 
     function enterVirtualDreamRewarder() public payable {

@@ -32,6 +32,7 @@ contract DeployVDRewarder is Script {
 
         vm.startBroadcast(deployerKey);
         VirtualDreamRewarder virtualDreamRewarder = new VirtualDreamRewarder(
+            msg.sender,
             subscriptionId,
             gasLane,
             automationUpdateInterval,

@@ -12,9 +12,9 @@ pragma solidity ^0.8.22;
  * Automation
  */
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
 
 contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInterface {
     /** @dev Essential Functions:
@@ -54,11 +54,13 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     error VDR__TransferFailed();
     error VDR__NotDreamCreator();
     error VDR__UpkeepNotNeeded();
+    error VDR__updateVDRewarderFailed();
+    error VDR__PrizePoolTransferFailed();
     error VDR__InvalidAmountCheckBalance();
 
     /// @dev Variables
     uint256 private s_totalDreams;
-    uint256 private s_prizeBalance;
+    uint256 private s_prizePool;
     uint256 private s_VirtualDreamRaiserBalance;
     address private immutable i_VDRewarder;
     uint256 private immutable i_interval;
@@ -77,7 +79,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
         bool idToPromoted;
     }
 
-    address[] private s_donators;
+    address payable[] private s_donators;
     address[] private s_walletsWhiteList;
 
     /// @dev Mappings
@@ -93,8 +95,9 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     event WalletRemovedFromWhiteList(address indexed wallet);
     event VirtualDreamRaiserFunded(uint256 donate, uint256 indexed prize);
     event VirtualDreamRaiserWithdrawal(uint256 amount);
+    event VDRewarderPlayersUpdated(address payable[] donators);
 
-    constructor(address rewarderAddress, uint256 interval, address owner) Ownable(owner) {
+    constructor(address owner, address rewarderAddress, uint256 interval) Ownable(owner) {
         i_VDRewarder = rewarderAddress;
         i_interval = interval;
         i_lastTimeStamp = block.timestamp;
@@ -137,9 +140,21 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
         dream.idToStatus = false;
     }
 
+    /// @notice Function, which will pass array of dreams funders and transfer prize pool to VirtualDreamRewarder contract
+    /// @param virtualDreamRewarder VirtualDreamRewarder contract address, which will handle lottery for dreams funders
     function updateVDRewarder(address virtualDreamRewarder) internal {
-        // call vdRewarder function to update array
-        // transfer prize funds
+        (bool success, ) = virtualDreamRewarder.call(abi.encodeWithSignature("updateVirtualDreamRewarder(address[])", s_donators));
+        if (success) {
+            emit VDRewarderPlayersUpdated(s_donators);
+
+            (bool secondSuccess, ) = virtualDreamRewarder.call{value: s_prizePool}("");
+            if (!secondSuccess) revert VDR__PrizePoolTransferFailed();
+
+            s_donators = new address payable[](0);
+            s_prizePool = 0;
+        } else {
+            revert VDR__updateVDRewarderFailed();
+        }
     }
 
     /// @notice Function, which allow users to donate for certain dream
@@ -155,8 +170,8 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
 
         emit DreamFunded(dreamId, donation, prize);
 
-        s_prizeBalance += prize;
-        s_donators.push(msg.sender);
+        s_prizePool += prize;
+        s_donators.push(payable(msg.sender));
         dream.idToTotalGathered += donation;
         dream.idToBalance += donation;
     }
@@ -193,7 +208,8 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
 
         emit VirtualDreamRaiserFunded(donation, prize);
 
-        s_prizeBalance += prize;
+        s_prizePool += prize;
+        s_donators.push(payable(msg.sender));
         s_VirtualDreamRaiserBalance += donation;
     }
 
