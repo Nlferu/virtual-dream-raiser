@@ -6,14 +6,12 @@ import {Test, console} from "forge-std/Test.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {DeployVDR} from "../../script/DeployVDR.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
-import {CreateSubscription} from "../../script/Interactions.s.sol";
 import {VirtualDreamRaiser} from "../../src/VirtualDreamRaiser.sol";
 import {DeployVDRewarder} from "../../script/DeployVDRewarder.s.sol";
 import {VRFCoordinatorV2Mock} from "../mocks/VRFCoordinatorV2Mock.sol";
 import {VirtualDreamRewarder} from "../../src/VirtualDreamRewarder.sol";
 
 contract VirtualDreamRewarderTest is StdCheats, Test {
-    /* Events */
     event PrizePoolAndPlayersUpdated(uint256 amount, address payable[] donators);
     event WinnerRequested(uint256 indexed requestId);
     event WinnerPicked(address indexed winner);
@@ -47,14 +45,7 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
 
         (, gasLane, automationUpdateInterval, callbackGasLimit, vrfCoordinatorV2, , ) = helperConfig.activeNetworkConfig();
 
-        // console.log("Raiser", address(virtualDreamRaiser));
-        // console.log("Owner Of Raiser", virtualDreamRaiser.owner());
-        // console.log("Rewarder", address(virtualDreamRewarder));
-        // console.log("Owner Of Rewarder", virtualDreamRewarder.owner());
-
         virtualDreamRewarder.transferOwnership(address(virtualDreamRaiser));
-
-        // console.log("Rewarder Owner After Transfer: ", virtualDreamRewarder.owner());
     }
 
     function testVirtualDreamRewarderInitializesInOpenState() public view {
