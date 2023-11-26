@@ -53,16 +53,24 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     error VDR__TransferFailed();
     error VDR__NotDreamCreator();
     error VDR__UpkeepNotNeeded();
+    error VDR__CheckingStateFailed();
     error VDR__updateVDRewarderFailed();
     error VDR__InvalidAmountCheckBalance();
 
+    /// @dev Enums
+    enum VirtualDreamRewarderState {
+        OPEN,
+        CALCULATING
+    }
+
     /// @dev Variables
+    address private immutable i_VDRewarder;
+    uint256 private immutable i_interval;
     uint256 private s_totalDreams;
     uint256 private s_prizePool;
     uint256 private s_lastTimeStamp;
     uint256 private s_VirtualDreamRaiserBalance;
-    address private immutable i_VDRewarder;
-    uint256 private immutable i_interval;
+    VirtualDreamRewarderState private s_state;
 
     /// @dev Structs
     struct Dream {
@@ -152,6 +160,19 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
 
         s_donators = new address payable[](0);
         s_prizePool = 0;
+    }
+
+    /// @notice Function, which is checking current state of VirtualDreamRewarder contract
+    /// @param virtualDreamRewarder VirtualDreamRewarder contract address, which will handle lottery for dreams funders
+    function checkRewarderState(address virtualDreamRewarder) internal {
+        (bool checkingState, bytes memory data) = virtualDreamRewarder.call(abi.encodeWithSignature("getVirtualDreamRewarderState()"));
+        if (!checkingState) revert VDR__CheckingStateFailed();
+        VirtualDreamRewarderState state = abi.decode(data, (VirtualDreamRewarderState));
+        if (state == VirtualDreamRewarderState.CALCULATING) {
+            s_state = VirtualDreamRewarderState.CALCULATING;
+        } else {
+            s_state = VirtualDreamRewarderState.OPEN;
+        }
     }
 
     /// @notice Function, which allow users to donate for certain dream
@@ -245,10 +266,16 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
 
     /// @notice This is the function that the Chainlink Keeper nodes call to check if performing upkeep is needed
     /// @param upkeepNeeded returns true or false depending on x conditions
-    function checkUpkeep(bytes memory /* checkData */) public view override returns (bool upkeepNeeded, bytes memory /* performData */) {
+    function checkUpkeep(bytes memory /* checkData */) public override returns (bool upkeepNeeded, bytes memory /* performData */) {
         bool timePassed = ((block.timestamp - s_lastTimeStamp) > i_interval);
         bool hasDreams = s_totalDreams > 0;
         bool hasDreamsToExpire = false;
+        checkRewarderState(i_VDRewarder);
+        bool isRewarderOpen = false;
+
+        if (s_state == VirtualDreamRewarderState.OPEN) {
+            isRewarderOpen = true;
+        }
 
         for (uint dreamId = 0; dreamId < s_totalDreams; dreamId++) {
             Dream storage dream = s_dreams[dreamId];
@@ -261,7 +288,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
             }
         }
 
-        upkeepNeeded = (timePassed && hasDreams && hasDreamsToExpire);
+        upkeepNeeded = (timePassed && hasDreams && hasDreamsToExpire && isRewarderOpen);
 
         return (upkeepNeeded, "0x0");
     }

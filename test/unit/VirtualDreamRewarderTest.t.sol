@@ -25,14 +25,16 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
     VirtualDreamRewarder virtualDreamRewarder;
     HelperConfig helperConfig;
 
+    address payable[] players;
     uint64 subscriptionId;
     bytes32 gasLane;
     uint256 automationUpdateInterval;
     uint32 callbackGasLimit;
     address vrfCoordinatorV2;
 
-    address public OWNER = makeAddr("Niferu");
-    uint256 public constant STARTING_OWNER_BALANCE = 100 ether;
+    address public CREATOR = makeAddr("creator");
+    address public FUNDER = makeAddr("user");
+    uint256 public constant STARTING_BALANCE = 100 ether;
 
     function setUp() external {
         raiserDeployer = new DeployVDR();
@@ -40,47 +42,93 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
 
         (virtualDreamRewarder, helperConfig, ) = rewarderDeployer.run();
         (virtualDreamRaiser) = raiserDeployer.run(address(virtualDreamRewarder));
+        deal(CREATOR, STARTING_BALANCE);
+        deal(FUNDER, STARTING_BALANCE);
 
         (, gasLane, automationUpdateInterval, callbackGasLimit, vrfCoordinatorV2, , ) = helperConfig.activeNetworkConfig();
 
-        console.log("Raiser", address(virtualDreamRaiser));
-        console.log("Owner Of Raiser", virtualDreamRaiser.owner());
-        console.log("Rewarder", address(virtualDreamRewarder));
-        console.log("Owner Of Rewarder", virtualDreamRewarder.owner());
+        // console.log("Raiser", address(virtualDreamRaiser));
+        // console.log("Owner Of Raiser", virtualDreamRaiser.owner());
+        // console.log("Rewarder", address(virtualDreamRewarder));
+        // console.log("Owner Of Rewarder", virtualDreamRewarder.owner());
 
         virtualDreamRewarder.transferOwnership(address(virtualDreamRaiser));
 
-        console.log("Rewarder Owner After Transfer: ", virtualDreamRewarder.owner());
+        // console.log("Rewarder Owner After Transfer: ", virtualDreamRewarder.owner());
     }
 
-    function testAll() public view {}
+    function testVirtualDreamRewarderInitializesInOpenState() public view {
+        assert(virtualDreamRewarder.getVirtualDreamRewarderState() == VirtualDreamRewarder.VirtualDreamRewarderState.OPEN);
+    }
+
+    function testVirtualDreamRewarderRecordsPlayerWhenTheyEnter() public dreamCreatedAndFunded(10) {
+        // Arrange
+
+        // Act
+        address player = virtualDreamRewarder.getPlayer(0);
+        uint256 numberOfPlayers = virtualDreamRewarder.getNumberOfPlayers();
+
+        // Assert
+        assert(player == FUNDER);
+        assert(numberOfPlayers == 1);
+    }
+
+    function testEmitsEventOnEntrance() public {
+        // Arrange
+        players.push(payable(FUNDER));
+        uint256 amount = (1 ether * 1) / 50;
+
+        // Act / Assert
+        virtualDreamRaiser.createDream(100, "description", 10, CREATOR);
+        vm.prank(FUNDER);
+        virtualDreamRaiser.fundDream{value: 1 ether}(0);
+        vm.warp(block.timestamp + automationUpdateInterval + 1);
+        vm.roll(block.number + 1);
+
+        vm.expectEmit(true, true, false, true, address(virtualDreamRewarder));
+        emit PrizePoolAndPlayersUpdated(amount, players);
+        vm.prank(address(virtualDreamRaiser));
+        virtualDreamRaiser.performUpkeep("");
+    }
+
+    function testDontAllowPlayersToEnterWhileVirtualDreamRewarderIsCalculating() public dreamCreatedAndFunded(10) {
+        // Arrange
+        vm.warp(block.timestamp + automationUpdateInterval + 1);
+        vm.roll(block.number + 1);
+        virtualDreamRewarder.performUpkeep("");
+
+        // Act
+        virtualDreamRaiser.createDream(100, "description", 10, CREATOR);
+        vm.prank(FUNDER);
+        virtualDreamRaiser.fundDream{value: 1 ether}(1);
+        vm.warp(block.timestamp + automationUpdateInterval + 1);
+        vm.roll(block.number + 1);
+
+        // Assert
+        vm.expectRevert(VirtualDreamRaiser.VDR__UpkeepNotNeeded.selector);
+        vm.prank(address(virtualDreamRaiser));
+        virtualDreamRaiser.performUpkeep("");
+    }
+
+    modifier dreamCreatedAndFunded(uint256 expiration) {
+        virtualDreamRaiser.createDream(100, "description", expiration, CREATOR);
+        vm.prank(FUNDER);
+        virtualDreamRaiser.fundDream{value: 1 ether}(0);
+        vm.warp(block.timestamp + automationUpdateInterval + 1);
+        vm.roll(block.number + 1);
+
+        vm.prank(address(virtualDreamRaiser));
+        virtualDreamRaiser.performUpkeep("");
+        _;
+    }
+
+    modifier skipFork() {
+        if (block.chainid != 31337) {
+            return;
+        }
+        _;
+    }
 }
-//     function testVirtualDreamRewarderInitializesInOpenState() public view {
-//         /// @dev Since "VirtualDreamRewarderState" is enum (type) we can see it even if it's private and call it like below:
-//         assert(virtualDreamRewarder.getVirtualDreamRewarderState() == VirtualDreamRewarder.VirtualDreamRewarderState.OPEN);
-//     }
-
-//     function testVirtualDreamRewarderRecordsPlayerWhenTheyEnter() public {
-//         // Arrange
-//         vm.prank(PLAYER);
-//         // Act
-//         virtualDreamRewarder.updateVirtualDreamRewarder();
-//         // Assert
-//         address playerRecorded = virtualDreamRewarder.getPlayer(0);
-//         assert(playerRecorded == PLAYER);
-//     }
-
-//     function testEmitsEventOnEntrance() public {
-//         // Arrange
-//         vm.prank(PLAYER);
-
-//         // Act / Assert
-//         /// @dev 1st = indexed param(check), 2nd = indexed param(check), 3rd = indexed param(check) (contracts allow only 3 indexed params)
-//         // 4th = checkData bool(check non-indexed params)
-//         vm.expectEmit(true, true, false, true, address(virtualDreamRewarder));
-//         emit PrizePoolAndPlayersUpdated(PLAYER, virtualDreamRewarderEntranceFee);
-//         virtualDreamRewarder.enterVirtualDreamRewarder{value: virtualDreamRewarderEntranceFee}();
-//     }
 
 //     function testDontAllowPlayersToEnterWhileVirtualDreamRewarderIsCalculating() public {
 //         // Arrange
