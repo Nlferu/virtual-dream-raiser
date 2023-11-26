@@ -8,7 +8,7 @@ import {console} from "forge-std/Test.sol";
 contract DeployVDR is Script {
     function run(address virtualDreamRewarder) external returns (VirtualDreamRaiser) {
         uint256 deployerKey = vm.envUint("LOCAL_PRIVATE_KEY");
-        uint256 interval = 30;
+        uint256 interval = 20;
 
         vm.startBroadcast(deployerKey);
         VirtualDreamRaiser virtualDreamRaiser = new VirtualDreamRaiser(msg.sender, virtualDreamRewarder, interval);
