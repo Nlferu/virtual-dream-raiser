@@ -219,7 +219,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     //////////////////////////////////// @notice Virtual Dream Raiser Functions ////////////////////////////////////
 
     /// @notice Function, which allow users to donate for VirtualDreamRaiser creators
-    function fundDreamers() external payable {
+    function fundVirtualDreamRaiser() external payable {
         if (msg.value <= 0) revert VDR__ZeroAmount();
 
         uint256 donation = (msg.value * 49) / 50;
@@ -380,5 +380,9 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
 
     function getNewPlayers() external view returns (address payable[] memory) {
         return s_donators;
+    }
+
+    function getVirtualDreamRaiserBalance() external view returns (uint256) {
+        return s_VirtualDreamRaiserBalance;
     }
 }

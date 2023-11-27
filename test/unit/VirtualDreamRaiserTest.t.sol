@@ -24,6 +24,11 @@ contract VirtualDreamRaiserTest is StdCheats, Test {
     event VirtualDreamRaiserWithdrawal(uint256 amount);
     event VDRewarderUpdated(uint256 amount, address payable[] donators);
 
+    enum VirtualDreamRewarderState {
+        OPEN,
+        CALCULATING
+    }
+
     DeployVDR raiserDeployer;
     DeployVDRewarder rewarderDeployer;
 
@@ -86,6 +91,8 @@ contract VirtualDreamRaiserTest is StdCheats, Test {
         vm.prank(USER);
         virtualDreamRaiser.addToWhiteList(USER);
 
+        vm.expectEmit(true, false, false, false, address(virtualDreamRaiser));
+        emit WalletAddedToWhiteList(USER);
         virtualDreamRaiser.addToWhiteList(USER);
 
         vm.expectEmit(true, false, false, false, address(virtualDreamRaiser));
@@ -160,6 +167,107 @@ contract VirtualDreamRaiserTest is StdCheats, Test {
         virtualDreamRaiser.realizeDream(0, 0.5 ether);
 
         assert(virtualDreamRaiser.getDreamBalance(0) == donation - 0.5 ether);
+    }
+
+    function testCanFundDreamers() public {
+        uint256 donation = (1 ether * 49) / 50;
+        uint256 prize = ((1 ether * 1) / 50);
+
+        vm.expectEmit(true, false, false, false, address(virtualDreamRaiser));
+        emit VirtualDreamRaiserFunded(donation, prize);
+        vm.prank(FUNDER);
+        virtualDreamRaiser.fundVirtualDreamRaiser{value: 1 ether}();
+
+        assert(virtualDreamRaiser.getPrizePool() == prize);
+        assert(virtualDreamRaiser.getNewPlayers().length == 1);
+        assert(virtualDreamRaiser.getVirtualDreamRaiserBalance() == donation);
+
+        vm.expectRevert(VirtualDreamRaiser.VDR__ZeroAmount.selector);
+        vm.prank(FUNDER);
+        virtualDreamRaiser.fundVirtualDreamRaiser();
+    }
+
+    function testCanWithdrawDonates() public {
+        address owner = virtualDreamRaiser.owner();
+
+        vm.expectRevert(VirtualDreamRaiser.VDR__ZeroAmount.selector);
+        vm.prank(owner);
+        virtualDreamRaiser.withdrawDonates();
+
+        vm.prank(FUNDER);
+        virtualDreamRaiser.fundVirtualDreamRaiser{value: 1 ether}();
+        uint256 balance = virtualDreamRaiser.getVirtualDreamRaiserBalance();
+
+        vm.expectRevert();
+        vm.prank(FUNDER);
+        virtualDreamRaiser.withdrawDonates();
+
+        vm.expectRevert(VirtualDreamRaiser.VDR__TransferFailed.selector);
+        vm.prank(owner);
+        virtualDreamRaiser.withdrawDonates();
+
+        vm.prank(owner);
+        virtualDreamRaiser.transferOwnership(CREATOR);
+
+        vm.expectEmit(true, false, false, false, address(virtualDreamRaiser));
+        emit VirtualDreamRaiserWithdrawal(balance);
+        vm.prank(CREATOR);
+        virtualDreamRaiser.withdrawDonates();
+
+        uint256 updatedBalance = virtualDreamRaiser.getVirtualDreamRaiserBalance();
+
+        assert(updatedBalance == 0);
+    }
+
+    function testCanRemoveAddressFromWhiteList() public {
+        virtualDreamRaiser.addToWhiteList(CREATOR);
+        virtualDreamRaiser.addToWhiteList(USER);
+        virtualDreamRaiser.addToWhiteList(FUNDER);
+
+        assert(virtualDreamRaiser.getWhiteWalletsList().length == 3);
+
+        vm.expectRevert();
+        vm.prank(FUNDER);
+        virtualDreamRaiser.removeFromWhiteList(CREATOR);
+
+        vm.expectEmit(true, false, false, false, address(virtualDreamRaiser));
+        emit WalletRemovedFromWhiteList(USER);
+        virtualDreamRaiser.removeFromWhiteList(USER);
+
+        assert(virtualDreamRaiser.getWhiteWalletsList().length == 2);
+    }
+
+    function testCheckingUpkeepCorrectly() public {
+        (bool upkeepNeeded, ) = virtualDreamRaiser.checkUpkeep("");
+
+        assert(!upkeepNeeded);
+
+        virtualDreamRaiser.createDream(100, "description", 10, CREATOR);
+        vm.prank(FUNDER);
+        virtualDreamRaiser.fundDream{value: 1 ether}(0);
+        vm.warp(block.timestamp + 21);
+        vm.roll(block.number + 1);
+
+        (, bytes memory data) = address(virtualDreamRewarder).call(abi.encodeWithSignature("getVirtualDreamRewarderState()"));
+        VirtualDreamRewarderState state = abi.decode(data, (VirtualDreamRewarderState));
+        assert(state == VirtualDreamRewarderState.OPEN);
+
+        (bool updatedUpkeepNeeded, ) = virtualDreamRaiser.checkUpkeep("");
+        assert(updatedUpkeepNeeded);
+    }
+
+    function testCanPerformUpkeep() public {
+        vm.expectRevert(VirtualDreamRaiser.VDR__UpkeepNotNeeded.selector);
+        virtualDreamRaiser.performUpkeep("");
+
+        virtualDreamRaiser.createDream(100, "description", 10, CREATOR);
+        vm.prank(FUNDER);
+        virtualDreamRaiser.fundDream{value: 1 ether}(0);
+        vm.warp(block.timestamp + 21);
+        vm.roll(block.number + 1);
+
+        vm.prank(address(virtualDreamRaiser));
+        virtualDreamRaiser.performUpkeep("");
     }
 
     modifier dreamCreatedAndFunded(uint256 expiration) {

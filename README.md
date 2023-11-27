@@ -11,3 +11,5 @@ Crafted to empower dreamers worldwide, our platform fosters a vibrant community 
 Our mission is to bridge aspirations with action, creating a space where dreams find solidarity, support, and momentum. Here, the boundaries of imagination are expanded, and the spirit of innovation thrives.
 
 Join us at Virtual Dream Raiser, where the virtual meets the visionary, and together, we elevate dreams to new heights.
+
+![Alt text](image.png)
