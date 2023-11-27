@@ -92,8 +92,13 @@ contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibl
         bool timePassed = ((block.timestamp - s_lastTimeStamp) > i_interval);
         bool hasPlayers = s_players.length > 0;
         bool hasBalance = address(this).balance > 0;
+        bool hasMinAmountOfETH = false;
 
-        upkeepNeeded = (timePassed && isOpen && hasBalance && hasPlayers);
+        if (address(this).balance >= 0.1 ether) {
+            hasMinAmountOfETH = true;
+        }
+
+        upkeepNeeded = (timePassed && isOpen && hasBalance && hasPlayers && hasMinAmountOfETH);
 
         return (upkeepNeeded, "0x0");
     }

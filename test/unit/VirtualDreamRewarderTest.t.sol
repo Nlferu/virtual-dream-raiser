@@ -222,7 +222,7 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
             address player = address(uint160(i));
             hoax(player, 10 ether);
 
-            virtualDreamRaiser.fundDream{value: 1 ether}(1);
+            virtualDreamRaiser.fundDream{value: 5 ether}(1);
         }
 
         vm.warp(block.timestamp + 21);
@@ -258,7 +258,7 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         VirtualDreamRewarder.VirtualDreamRewarderState virtualDreamRewarderState = virtualDreamRewarder.getVirtualDreamRewarderState();
         uint256 winnerBalance = recentWinner.balance;
         uint256 endingTimeStamp = virtualDreamRewarder.getLastTimeStamp();
-        uint256 prize = ((1 ether * 1) / 50) * (additionalEntrances + 1);
+        uint256 prize = ((5 ether * 1) / 50) * (additionalEntrances + 1);
 
         console.log("Recent Winner: ", recentWinner);
         assert(recentWinner == winner);
@@ -308,7 +308,7 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
     modifier dreamCreatedAndFunded(uint256 expiration) {
         virtualDreamRaiser.createDream(100, "description", expiration, CREATOR);
         vm.prank(FUNDER);
-        virtualDreamRaiser.fundDream{value: 1 ether}(0);
+        virtualDreamRaiser.fundDream{value: 5 ether}(0);
         vm.warp(block.timestamp + 21);
         vm.roll(block.number + 1);
 
