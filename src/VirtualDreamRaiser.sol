@@ -16,36 +16,6 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
 
 contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInterface {
-    /** @dev Essential Functions:
-     * Create fund raising event with specified goal {amount}, {description}, {expirationDate}, {partnerOrganizationAuthorizedWallet}(no clause needed).
-     *
-     * On Fund Raising Event Expiry -> If goal reached, transfer funds to partner/event creator wallet.
-     * On Fund Raising Event Expiry -> If goal NOT reached, transfer funds back to donators?
-     *
-     * Clause that ensures creator of event will use raised funds accordingly to event description (no clause for events where we give registrated wallet confirmed as charity one).
-     * If no clause we can consider registration of white wallets (user must provide real personal data to get authorized, malicious behaviour will be punishable).
-     *
-     * Function, which allows users to donate specific event.
-     * Mapping For Each Event Tracking; {eventGoal} {expirationTime} {allDonators} {uniqueEventId} {realizatorWallet}
-     *
-     * Function, which will send gathered ETH to target wallet/wallets with help of Chainlink Automation on event expiration date.
-     *
-     * Function To Add Partner Authorized Wallet To White List.
-     * Partners Authorized Wallets Array.
-     *
-     * This project will be based on self trust, but organizations with confirmed wallets will be marked.
-     *
-     *
-     *
-     * @dev Add VRFCoordinatorV2 mechanic
-     * Create array with funders
-     * Add 2% from funded amounts to be added to prize pool
-     *
-     * function will be sending funds and list of participants to VDRewarder with performUpkeep()
-     * Create function which will be returning those funders and resetting them after send and sending prize pool to lottery contract
-     *
-     */
-
     /// @dev Errors
     error VDR__ZeroAmount();
     error VDR__InvalidDream();
@@ -103,11 +73,14 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     event VirtualDreamRaiserWithdrawal(uint256 amount);
     event VDRewarderUpdated(uint256 amount, address payable[] donators);
 
+    /// @dev Constructor
     constructor(address owner, address rewarderAddress, uint256 interval) Ownable(owner) {
         i_VDRewarder = rewarderAddress;
         i_interval = interval;
         s_lastTimeStamp = block.timestamp;
     }
+
+    //////////////////////////////////// @notice Virtual Dream Raiser External Functions ////////////////////////////////////
 
     /// @notice Creating dream event, which will be gathering funds for dream realization
     /// @param goal Target amount that creator of dream want to gather
@@ -137,42 +110,6 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
         s_totalDreams += 1;
 
         emit DreamCreated(goal, description, expiration, organizatorWallet);
-    }
-
-    /// @notice Function, which will be called by Chainlink Keepers automatically always when dream event expire
-    /// @param dreamId Unique identifier of dream
-    function expireDream(uint256 dreamId) internal {
-        Dream storage dream = s_dreams[dreamId];
-
-        dream.idToStatus = false;
-        s_lastTimeStamp = block.timestamp;
-
-        emit DreamExpired(dreamId);
-    }
-
-    /// @notice Function, which will pass array of dreams funders and transfer prize pool to VirtualDreamRewarder contract
-    /// @param virtualDreamRewarder VirtualDreamRewarder contract address, which will handle lottery for dreams funders
-    function updateVDRewarder(address virtualDreamRewarder) internal {
-        (bool success, ) = virtualDreamRewarder.call{value: s_prizePool}(abi.encodeWithSignature("updateVirtualDreamRewarder(address[])", s_donators));
-        if (!success) revert VDR__updateVDRewarderFailed();
-
-        emit VDRewarderUpdated(s_prizePool, s_donators);
-
-        s_donators = new address payable[](0);
-        s_prizePool = 0;
-    }
-
-    /// @notice Function, which is checking current state of VirtualDreamRewarder contract
-    /// @param virtualDreamRewarder VirtualDreamRewarder contract address, which will handle lottery for dreams funders
-    function getAndUpdateRewarderState(address virtualDreamRewarder) internal {
-        (bool checkingState, bytes memory data) = virtualDreamRewarder.call(abi.encodeWithSignature("getVirtualDreamRewarderState()"));
-        if (!checkingState) revert VDR__CheckingStateFailed();
-        VirtualDreamRewarderState state = abi.decode(data, (VirtualDreamRewarderState));
-        if (state == VirtualDreamRewarderState.CALCULATING) {
-            s_state = VirtualDreamRewarderState.CALCULATING;
-        } else {
-            s_state = VirtualDreamRewarderState.OPEN;
-        }
     }
 
     /// @notice Function, which allow users to donate for certain dream
@@ -211,12 +148,50 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
         emit DreamRealized(dreamId, amount);
     }
 
-    /// @notice Function, which will show calculated USD value of all gathered ETH based on Chainlink price feeds
-    function calculateApproximateUsdValue() internal {
-        /** @dev Chainlink Keepers should keep calling this once a day */
+    //////////////////////////////////// @notice Virtual Dream Raiser Internal Functions ////////////////////////////////////
+
+    /// @notice Function, which will be called by Chainlink Keepers automatically always when dream event expire
+    /// @param dreamId Unique identifier of dream
+    function expireDream(uint256 dreamId) internal {
+        Dream storage dream = s_dreams[dreamId];
+
+        dream.idToStatus = false;
+        s_lastTimeStamp = block.timestamp;
+
+        emit DreamExpired(dreamId);
     }
 
-    //////////////////////////////////// @notice Virtual Dream Raiser Functions ////////////////////////////////////
+    /// @notice Function, which will pass array of dreams funders and transfer prize pool to VirtualDreamRewarder contract
+    /// @param virtualDreamRewarder VirtualDreamRewarder contract address, which will handle lottery for dreams funders
+    function updateVDRewarder(address virtualDreamRewarder) internal {
+        (bool success, ) = virtualDreamRewarder.call{value: s_prizePool}(abi.encodeWithSignature("updateVirtualDreamRewarder(address[])", s_donators));
+        if (!success) revert VDR__updateVDRewarderFailed();
+
+        emit VDRewarderUpdated(s_prizePool, s_donators);
+
+        s_donators = new address payable[](0);
+        s_prizePool = 0;
+    }
+
+    /// @notice Function, which is checking current state of VirtualDreamRewarder contract
+    /// @param virtualDreamRewarder VirtualDreamRewarder contract address, which will handle lottery for dreams funders
+    function getAndUpdateRewarderState(address virtualDreamRewarder) internal {
+        (bool checkingState, bytes memory data) = virtualDreamRewarder.call(abi.encodeWithSignature("getVirtualDreamRewarderState()"));
+        if (!checkingState) revert VDR__CheckingStateFailed();
+        VirtualDreamRewarderState state = abi.decode(data, (VirtualDreamRewarderState));
+        if (state == VirtualDreamRewarderState.CALCULATING) {
+            s_state = VirtualDreamRewarderState.CALCULATING;
+        } else {
+            s_state = VirtualDreamRewarderState.OPEN;
+        }
+    }
+
+    /// @notice Function, which will show calculated USD value of all gathered and target ETH based on Chainlink price feeds
+    function calculateApproximateUsdValue() internal {
+        /** @dev Chainlink Keepers should keep calling this once a day ? */
+    }
+
+    //////////////////////////////////// @notice Virtual Dream Raiser Owners Functions ////////////////////////////////////
 
     /// @notice Function, which allow users to donate for VirtualDreamRaiser creators
     function fundVirtualDreamRaiser() external payable {
