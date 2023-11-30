@@ -54,6 +54,3 @@ addConsumer:
 
 fundSub:
 	@forge script script/Interactions.s.sol:FundSubscription $(NETWORK_ARGS)
-
-hack:
-	@forge script script/Interactions.s.sol:HackerScript $(NETWORK_ARGS)
