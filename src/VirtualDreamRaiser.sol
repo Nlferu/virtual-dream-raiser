@@ -385,4 +385,8 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     function getVirtualDreamRaiserBalance() external view returns (uint256) {
         return s_VirtualDreamRaiserBalance;
     }
+
+    function getVDRewarder() external view returns (address) {
+        return i_VDRewarder;
+    }
 }

@@ -43,6 +43,9 @@ endif
 deploy:
 	@forge script script/DeployVDR.s.sol:DeployVDR $(NETWORK_ARGS)
 
+deployAll:
+	@forge script script/DeployCompleteVDR.s.sol:DeployCompleteVDR $(NETWORK_ARGS)
+
 createSub:
 	@forge script script/Interactions.s.sol:CreateSubscription $(NETWORK_ARGS)
 
