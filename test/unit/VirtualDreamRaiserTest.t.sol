@@ -144,29 +144,25 @@ contract VirtualDreamRaiserTest is StdCheats, Test {
 
         vm.expectRevert(VirtualDreamRaiser.VDR__InvalidAmountCheckBalance.selector);
         vm.prank(CREATOR);
-        virtualDreamRaiser.realizeDream(0, 0.5 ether);
+        virtualDreamRaiser.realizeDream(0);
 
         vm.prank(FUNDER);
         virtualDreamRaiser.fundDream{value: 1 ether}(0);
 
         vm.expectRevert(VirtualDreamRaiser.VDR__InvalidDream.selector);
         vm.prank(CREATOR);
-        virtualDreamRaiser.realizeDream(1, 0.5 ether);
+        virtualDreamRaiser.realizeDream(1);
 
         vm.expectRevert(VirtualDreamRaiser.VDR__NotDreamCreator.selector);
         vm.prank(FUNDER);
-        virtualDreamRaiser.realizeDream(0, 0.5 ether);
-
-        vm.expectRevert(VirtualDreamRaiser.VDR__InvalidAmountCheckBalance.selector);
-        vm.prank(CREATOR);
-        virtualDreamRaiser.realizeDream(0, 1 ether);
+        virtualDreamRaiser.realizeDream(0);
 
         assert(virtualDreamRaiser.getDreamBalance(0) == donation);
 
         vm.prank(CREATOR);
-        virtualDreamRaiser.realizeDream(0, 0.5 ether);
+        virtualDreamRaiser.realizeDream(0);
 
-        assert(virtualDreamRaiser.getDreamBalance(0) == donation - 0.5 ether);
+        assert(virtualDreamRaiser.getDreamBalance(0) == 0);
     }
 
     function testCanFundDreamers() public {

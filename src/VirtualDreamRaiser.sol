@@ -133,19 +133,18 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
 
     /// @notice Function, which allows creator of dream event to withdraw funds
     /// @param dreamId Unique identifier of dream
-    /// @param amount Amount to be funded for certain dream
-    function realizeDream(uint256 dreamId, uint256 amount) external nonReentrant {
+    function realizeDream(uint256 dreamId) external nonReentrant {
         Dream storage dream = s_dreams[dreamId];
         if (dreamId >= s_totalDreams) revert VDR__InvalidDream();
         if (dream.idToCreator != msg.sender) revert VDR__NotDreamCreator();
-        if (dream.idToBalance == 0 || dream.idToBalance < amount) revert VDR__InvalidAmountCheckBalance();
+        if (dream.idToBalance == 0) revert VDR__InvalidAmountCheckBalance();
 
-        dream.idToBalance -= amount;
-
-        (bool success, ) = dream.idToWallet.call{value: amount}("");
+        (bool success, ) = dream.idToWallet.call{value: dream.idToBalance}("");
         if (!success) revert VDR__TransferFailed();
 
-        emit DreamRealized(dreamId, amount);
+        emit DreamRealized(dreamId, dream.idToBalance);
+
+        dream.idToBalance = 0;
     }
 
     //////////////////////////////////// @notice Virtual Dream Raiser Internal Functions ////////////////////////////////////
