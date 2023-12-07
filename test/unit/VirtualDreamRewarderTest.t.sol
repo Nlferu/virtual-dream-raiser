@@ -291,6 +291,12 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         assertEq(funders, 1);
     }
 
+    function testGetTimeUntilNextDraw() public {
+        uint256 timeLeft = virtualDreamRewarder.getTimeUntilNextDraw();
+
+        assertEq(30, timeLeft);
+    }
+
     modifier dreamCreatedAndFunded(uint256 expiration) {
         virtualDreamRaiser.createDream(100, "description", expiration, CREATOR);
         vm.prank(FUNDER);

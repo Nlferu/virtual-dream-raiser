@@ -160,5 +160,7 @@ contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibl
         return s_players.length;
     }
 
-    function getTimeUntilNextDraw() public view returns (uint256) {}
+    function getTimeUntilNextDraw() public view returns (uint256) {
+        return ((s_lastTimeStamp + i_interval) < block.timestamp) ? 0 : ((s_lastTimeStamp + i_interval) - block.timestamp);
+    }
 }

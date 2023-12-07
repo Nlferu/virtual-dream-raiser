@@ -90,9 +90,12 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     function createDream(uint256 goal, string calldata description, uint256 expiration, address organizatorWallet) external {
         Dream storage dream = s_dreams[s_totalDreams];
 
+        // Change to 1 days
+        uint256 timeUnit = 1;
+
         dream.idToCreator = msg.sender;
         dream.idToWallet = organizatorWallet;
-        dream.idToTimeLeft = (block.timestamp + expiration);
+        dream.idToTimeLeft = (block.timestamp + (expiration * timeUnit));
         dream.idToGoal = goal;
         dream.idToDescription = description;
         dream.idToStatus = true;
@@ -240,16 +243,10 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
 
     /// @notice This is the function that the Chainlink Keeper nodes call to check if performing upkeep is needed
     /// @param upkeepNeeded returns true or false depending on x conditions
-    function checkUpkeep(bytes memory /* checkData */) public override returns (bool upkeepNeeded, bytes memory /* performData */) {
+    function checkUpkeep(bytes memory /* checkData */) public view override returns (bool upkeepNeeded, bytes memory /* performData */) {
         bool timePassed = ((block.timestamp - s_lastTimeStamp) > i_interval);
         bool hasDreams = s_totalDreams > 0;
         bool hasDreamsToExpire = false;
-        getAndUpdateRewarderState(i_VDRewarder);
-        bool isRewarderOpen = false;
-
-        if (s_state == VirtualDreamRewarderState.OPEN) {
-            isRewarderOpen = true;
-        }
 
         for (uint dreamId = 0; dreamId < s_totalDreams; dreamId++) {
             Dream storage dream = s_dreams[dreamId];
@@ -262,7 +259,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
             }
         }
 
-        upkeepNeeded = (timePassed && hasDreams && hasDreamsToExpire && isRewarderOpen);
+        upkeepNeeded = (timePassed && hasDreams && hasDreamsToExpire);
 
         return (upkeepNeeded, "0x0");
     }
@@ -270,8 +267,14 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     /// @notice Once checkUpkeep() returns "true" this function is called to execute expireDream() and calculateApproximateUsdValue() functions
     function performUpkeep(bytes calldata /* performData */) external override {
         (bool upkeepNeeded, ) = checkUpkeep("");
+        getAndUpdateRewarderState(i_VDRewarder);
+        bool isRewarderOpen = false;
 
-        if (!upkeepNeeded) revert VDR__UpkeepNotNeeded();
+        if (s_state == VirtualDreamRewarderState.OPEN) {
+            isRewarderOpen = true;
+        }
+
+        if (!upkeepNeeded || !isRewarderOpen) revert VDR__UpkeepNotNeeded();
 
         for (uint dreamId = 0; dreamId < s_totalDreams; dreamId++) {
             Dream storage dream = s_dreams[dreamId];
