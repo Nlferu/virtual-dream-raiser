@@ -56,11 +56,9 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         // Arrange
 
         // Act
-        address player = virtualDreamRewarder.getPlayer(0);
         uint256 numberOfPlayers = virtualDreamRewarder.getNumberOfPlayers();
 
         // Assert
-        assert(player == FUNDER);
         assert(numberOfPlayers == 1);
     }
 
@@ -266,18 +264,6 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         assert(winnerBalance == startingBalance + prize);
         assert(endingTimeStamp > startingTimeStamp);
         assert(virtualDreamRewarder.getNumberOfPlayers() == 0);
-    }
-
-    function testGetNumWords() public {
-        uint256 numWords = virtualDreamRewarder.getNumWords();
-
-        assertEq(numWords, 1);
-    }
-
-    function testGetRequestConfirmations() public {
-        uint256 requests = virtualDreamRewarder.getRequestConfirmations();
-
-        assertEq(requests, 3);
     }
 
     function testGetInterval() public {

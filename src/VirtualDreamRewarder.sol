@@ -144,20 +144,8 @@ contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibl
         return s_state;
     }
 
-    function getNumWords() public pure returns (uint256) {
-        return NUM_WORDS;
-    }
-
-    function getRequestConfirmations() public pure returns (uint256) {
-        return REQUEST_CONFIRMATIONS;
-    }
-
     function getRecentWinner() public view returns (address) {
         return s_recentWinner;
-    }
-
-    function getPlayer(uint256 index) public view returns (address) {
-        return s_players[index];
     }
 
     function getLastTimeStamp() public view returns (uint256) {
@@ -171,4 +159,6 @@ contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibl
     function getNumberOfPlayers() public view returns (uint256) {
         return s_players.length;
     }
+
+    function getTimeUntilNextDraw() public view returns (uint256) {}
 }
