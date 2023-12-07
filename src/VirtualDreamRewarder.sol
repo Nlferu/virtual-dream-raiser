@@ -94,7 +94,7 @@ contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibl
         bool hasBalance = address(this).balance > 0;
         bool hasMinAmountOfETH = false;
 
-        if (address(this).balance >= 0.1 ether) {
+        if (address(this).balance >= 0.01 ether) {
             hasMinAmountOfETH = true;
         }
 
