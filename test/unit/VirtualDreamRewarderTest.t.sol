@@ -52,7 +52,7 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         assert(virtualDreamRewarder.getVirtualDreamRewarderState() == VirtualDreamRewarder.VirtualDreamRewarderState.OPEN);
     }
 
-    function testVirtualDreamRewarderRecordsPlayerWhenTheyEnter() public dreamCreatedAndFunded(10) {
+    function testVirtualDreamRewarderRecordsPlayerWhenTheyEnter() public dreamCreatedAndFunded(1) {
         // Arrange
 
         // Act
@@ -68,10 +68,10 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         uint256 amount = (1 ether * 1) / 50;
 
         // Act / Assert
-        virtualDreamRaiser.createDream(100, "description", 10, CREATOR);
+        virtualDreamRaiser.createDream(100, "description", 1, CREATOR);
         vm.prank(FUNDER);
         virtualDreamRaiser.fundDream{value: 1 ether}(0);
-        vm.warp(block.timestamp + automationUpdateInterval + 1);
+        vm.warp(block.timestamp + automationUpdateInterval + 100);
         vm.roll(block.number + 1);
 
         vm.expectEmit(true, true, false, true, address(virtualDreamRewarder));
@@ -80,14 +80,14 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         virtualDreamRaiser.performUpkeep("");
     }
 
-    function testDontAllowPlayersToEnterWhileVirtualDreamRewarderIsCalculating() public dreamCreatedAndFunded(10) {
+    function testDontAllowPlayersToEnterWhileVirtualDreamRewarderIsCalculating() public dreamCreatedAndFunded(1) {
         // Arrange
         vm.warp(block.timestamp + automationUpdateInterval + 1);
         vm.roll(block.number + 1);
         virtualDreamRewarder.performUpkeep("");
 
         // Act
-        virtualDreamRaiser.createDream(100, "description", 10, CREATOR);
+        virtualDreamRaiser.createDream(100, "description", 1, CREATOR);
         vm.prank(FUNDER);
         virtualDreamRaiser.fundDream{value: 1 ether}(1);
         vm.warp(block.timestamp + automationUpdateInterval + 1);
@@ -111,7 +111,7 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         assert(!upkeepNeeded);
     }
 
-    function testCheckUpkeepReturnsFalseIfVirtualDreamRewarderIsntOpen() public dreamCreatedAndFunded(10) {
+    function testCheckUpkeepReturnsFalseIfVirtualDreamRewarderIsntOpen() public dreamCreatedAndFunded(1) {
         // Arrange
         vm.warp(block.timestamp + automationUpdateInterval + 1);
         vm.roll(block.number + 1);
@@ -126,13 +126,25 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         assert(upkeepNeeded == false);
     }
 
-    function testCheckUpkeepReturnsFalseIfEnoughTimeHasntPassed() public dreamCreatedAndFunded(10) {
+    function testCheckUpkeepReturnsFalseIfEnoughTimeHasntPassed() public {
+        virtualDreamRaiser.createDream(100, "description", 1, CREATOR);
+        vm.prank(FUNDER);
+        virtualDreamRaiser.fundDream{value: 5 ether}(0);
+        vm.warp(block.timestamp + 86500);
+        vm.roll(block.number + 1);
+
+        vm.prank(address(virtualDreamRaiser));
+        virtualDreamRaiser.performUpkeep("");
+
+        rewind(86400);
+        vm.roll(block.number + 1);
+
         (bool upkeepNeeded, ) = virtualDreamRewarder.checkUpkeep("");
 
         assert(upkeepNeeded == false);
     }
 
-    function testCheckUpkeepReturnsTrueWhenParametersGood() public dreamCreatedAndFunded(10) {
+    function testCheckUpkeepReturnsTrueWhenParametersGood() public dreamCreatedAndFunded(1) {
         // Arrange
         vm.warp(block.timestamp + automationUpdateInterval + 1);
         vm.roll(block.number + 1);
@@ -144,7 +156,7 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         assert(upkeepNeeded);
     }
 
-    function testPerformUpkeepCanOnlyRunIfCheckUpkeepIsTrueAndEmitsRequestId() public dreamCreatedAndFunded(10) {
+    function testPerformUpkeepCanOnlyRunIfCheckUpkeepIsTrueAndEmitsRequestId() public dreamCreatedAndFunded(1) {
         // Arrange
         bytes32 requestId;
 
@@ -183,7 +195,7 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         virtualDreamRewarder.performUpkeep("");
     }
 
-    function testPerformUpkeepUpdatesVirtualDreamRewarderState() public dreamCreatedAndFunded(10) {
+    function testPerformUpkeepUpdatesVirtualDreamRewarderState() public dreamCreatedAndFunded(1) {
         // Arrange
         vm.warp(block.timestamp + automationUpdateInterval + 1);
         vm.roll(block.number + 1);
@@ -198,7 +210,7 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         assert(uint(virtualDreamRewarderState) == 1);
     }
 
-    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(uint256 randomRequestId) public dreamCreatedAndFunded(10) skipFork {
+    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(uint256 randomRequestId) public dreamCreatedAndFunded(1) skipFork {
         // Arrange / Act / Assert
         /// @dev This error message comes from VRFCoordinatorV2
         vm.expectRevert("nonexistent request");
@@ -206,7 +218,7 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(randomRequestId, address(virtualDreamRewarder));
     }
 
-    function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney() public dreamCreatedAndFunded(10) skipFork {
+    function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney() public dreamCreatedAndFunded(1) skipFork {
         address winner;
         address expectedWinner = address(1);
 
@@ -214,7 +226,7 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
         uint256 additionalEntrances = 3;
         uint256 startingIndex = 1; // We have starting index be 1 so we can start with address(1) and not address(0)
 
-        virtualDreamRaiser.createDream(100, "description", 10, CREATOR);
+        virtualDreamRaiser.createDream(100, "description", 1, CREATOR);
 
         for (uint256 i = startingIndex; i < startingIndex + additionalEntrances; i++) {
             address player = address(uint160(i));
@@ -223,13 +235,13 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
             virtualDreamRaiser.fundDream{value: 5 ether}(1);
         }
 
-        vm.warp(block.timestamp + 21);
+        vm.warp(block.timestamp + 86500);
         vm.roll(block.number + 1);
 
         vm.prank(address(virtualDreamRaiser));
         virtualDreamRaiser.performUpkeep("");
 
-        vm.warp(block.timestamp + 21);
+        vm.warp(block.timestamp + 86500);
         vm.roll(block.number + 1);
 
         uint256 startingTimeStamp = virtualDreamRewarder.getLastTimeStamp();
@@ -269,7 +281,7 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
     function testGetInterval() public {
         uint256 interval = virtualDreamRewarder.getInterval();
 
-        assertEq(interval, 30);
+        assertEq(interval, 86400);
     }
 
     function testGetNumberOfPlayers() public {
@@ -277,10 +289,10 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
 
         assertEq(funders, 0);
 
-        virtualDreamRaiser.createDream(100, "description", 10, CREATOR);
+        virtualDreamRaiser.createDream(100, "description", 1, CREATOR);
         vm.prank(FUNDER);
         virtualDreamRaiser.fundDream{value: 1 ether}(0);
-        vm.warp(block.timestamp + 21);
+        vm.warp(block.timestamp + 86500);
         vm.roll(block.number + 1);
 
         vm.prank(address(virtualDreamRaiser));
@@ -294,14 +306,14 @@ contract VirtualDreamRewarderTest is StdCheats, Test {
     function testGetTimeUntilNextDraw() public {
         uint256 timeLeft = virtualDreamRewarder.getTimeUntilNextDraw();
 
-        assertEq(30, timeLeft);
+        assertEq(86400, timeLeft);
     }
 
     modifier dreamCreatedAndFunded(uint256 expiration) {
         virtualDreamRaiser.createDream(100, "description", expiration, CREATOR);
         vm.prank(FUNDER);
         virtualDreamRaiser.fundDream{value: 5 ether}(0);
-        vm.warp(block.timestamp + 21);
+        vm.warp(block.timestamp + 86500);
         vm.roll(block.number + 1);
 
         vm.prank(address(virtualDreamRaiser));

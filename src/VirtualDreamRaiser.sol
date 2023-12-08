@@ -90,8 +90,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     function createDream(uint256 goal, string calldata description, uint256 expiration, address organizatorWallet) external {
         Dream storage dream = s_dreams[s_totalDreams];
 
-        // Change to 1 days
-        uint256 timeUnit = 1;
+        uint256 timeUnit = 1 days;
 
         dream.idToCreator = msg.sender;
         dream.idToWallet = organizatorWallet;
@@ -188,9 +187,9 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
         }
     }
 
-    /// @notice Function, which will show calculated USD value of all gathered and target ETH based on Chainlink price feeds
+    /// @notice Function, which will show calculated USD value of all gathered and target ETH goal expressed in USD based on Chainlink price feeds
     function calculateApproximateUsdValue() internal {
-        /** @dev Chainlink Keepers should keep calling this once a day ? */
+        /** @dev Chainlink Keepers should keep calling in decent period */
     }
 
     //////////////////////////////////// @notice Virtual Dream Raiser Owners Functions ////////////////////////////////////

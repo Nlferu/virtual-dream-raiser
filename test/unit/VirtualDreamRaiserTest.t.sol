@@ -65,9 +65,9 @@ contract VirtualDreamRaiserTest is StdCheats, Test {
 
     function testCanCreateDreamEmitAndUpdateData() public {
         vm.expectEmit(true, false, false, false, address(virtualDreamRaiser));
-        emit DreamCreated(100, "description", 10, FUNDER);
+        emit DreamCreated(100, "description", 86400, FUNDER);
         vm.prank(CREATOR);
-        virtualDreamRaiser.createDream(100, "description", 10, FUNDER);
+        virtualDreamRaiser.createDream(100, "description", 1, FUNDER);
 
         address creator = virtualDreamRaiser.getCreator(0);
         address wallet = virtualDreamRaiser.getWithdrawWallet(0);
@@ -79,7 +79,7 @@ contract VirtualDreamRaiserTest is StdCheats, Test {
 
         assert(creator == CREATOR);
         assert(wallet == FUNDER);
-        assert(timeLeft == 10);
+        assert(timeLeft == 86400);
         assert(goal == 100);
         assertEq(desc, "description");
         assert(status);
@@ -97,14 +97,14 @@ contract VirtualDreamRaiserTest is StdCheats, Test {
 
         vm.expectEmit(true, false, false, false, address(virtualDreamRaiser));
         emit DreamPromoted(0);
-        virtualDreamRaiser.createDream(100, "description", 10, USER);
+        virtualDreamRaiser.createDream(100, "description", 1, USER);
 
         bool promoted = virtualDreamRaiser.getPromoted(0);
         assert(promoted == true);
     }
 
     function testCanExpireDream() public {
-        virtualDreamRaiser.createDream(100, "description", 10, FUNDER);
+        virtualDreamRaiser.createDream(100, "description", 1, FUNDER);
 
         uint256 donation = (1 ether * 49) / 50;
         uint256 prize = ((1 ether * 1) / 50);
@@ -120,7 +120,7 @@ contract VirtualDreamRaiserTest is StdCheats, Test {
         assert(virtualDreamRaiser.getTotalGathered(0) == donation);
         assert(virtualDreamRaiser.getDreamBalance(0) == donation);
 
-        vm.warp(block.timestamp + 21);
+        vm.warp(block.timestamp + 86500);
         vm.roll(block.number + 1);
 
         vm.expectEmit(true, false, false, false, address(virtualDreamRaiser));
@@ -140,7 +140,7 @@ contract VirtualDreamRaiserTest is StdCheats, Test {
         uint256 donation = (1 ether * 49) / 50;
 
         vm.prank(CREATOR);
-        virtualDreamRaiser.createDream(100, "description", 10, FUNDER);
+        virtualDreamRaiser.createDream(100, "description", 1, FUNDER);
 
         vm.expectRevert(VirtualDreamRaiser.VDR__InvalidAmountCheckBalance.selector);
         vm.prank(CREATOR);
@@ -238,10 +238,10 @@ contract VirtualDreamRaiserTest is StdCheats, Test {
 
         assert(!upkeepNeeded);
 
-        virtualDreamRaiser.createDream(100, "description", 10, CREATOR);
+        virtualDreamRaiser.createDream(100, "description", 1, CREATOR);
         vm.prank(FUNDER);
         virtualDreamRaiser.fundDream{value: 1 ether}(0);
-        vm.warp(block.timestamp + 21);
+        vm.warp(block.timestamp + 86500);
         vm.roll(block.number + 1);
 
         (, bytes memory data) = address(virtualDreamRewarder).call(abi.encodeWithSignature("getVirtualDreamRewarderState()"));
@@ -256,10 +256,10 @@ contract VirtualDreamRaiserTest is StdCheats, Test {
         vm.expectRevert(VirtualDreamRaiser.VDR__UpkeepNotNeeded.selector);
         virtualDreamRaiser.performUpkeep("");
 
-        virtualDreamRaiser.createDream(100, "description", 10, CREATOR);
+        virtualDreamRaiser.createDream(100, "description", 1, CREATOR);
         vm.prank(FUNDER);
         virtualDreamRaiser.fundDream{value: 1 ether}(0);
-        vm.warp(block.timestamp + 21);
+        vm.warp(block.timestamp + 86500);
         vm.roll(block.number + 1);
 
         vm.prank(address(virtualDreamRaiser));
