@@ -2,6 +2,8 @@
 
 **Live Project:** https://virtual-dream-raiser.vercel.app/
 
+**Guidance Video:** https://www.youtube.com/watch?v=hKRSpH7v4yQ&ab_channel=Niferu
+
 **Chainlink Constellation Hackathon Project**
 
 ![Alt text](DemoScreen.png)

@@ -187,11 +187,6 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
         }
     }
 
-    /// @notice Function, which will show calculated USD value of all gathered and target ETH goal expressed in USD based on Chainlink price feeds
-    function calculateApproximateUsdValue() internal {
-        /** @dev Chainlink Keepers should keep calling in decent period */
-    }
-
     //////////////////////////////////// @notice Virtual Dream Raiser Owners Functions ////////////////////////////////////
 
     /// @notice Function, which allow users to donate for VirtualDreamRaiser creators
@@ -220,12 +215,14 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
         s_VirtualDreamRaiserBalance = 0;
     }
 
+    /// @notice Function, which allow VirtualDreamRaiser creators to add wallet to white list
     function addToWhiteList(address organizationWallet) external onlyOwner {
         s_walletsWhiteList.push(organizationWallet);
 
         emit WalletAddedToWhiteList(organizationWallet);
     }
 
+    /// @notice Function, which allow VirtualDreamRaiser creators to remove wallet from white list
     function removeFromWhiteList(address organizationWallet) external onlyOwner {
         for (uint i = 0; i < s_walletsWhiteList.length; i++) {
             if (s_walletsWhiteList[i] == organizationWallet) {
@@ -263,7 +260,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
         return (upkeepNeeded, "0x0");
     }
 
-    /// @notice Once checkUpkeep() returns "true" this function is called to execute expireDream() and calculateApproximateUsdValue() functions
+    /// @notice Once checkUpkeep() returns "true" this function is called to execute expireDream() and updateVDRewarder() functions
     function performUpkeep(bytes calldata /* performData */) external override {
         (bool upkeepNeeded, ) = checkUpkeep("");
         getAndUpdateRewarderState(i_VDRewarder);
@@ -287,7 +284,6 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
 
     //////////////////////////////////// @notice Getters ////////////////////////////////////
 
-    /** @dev Try to combine all getters into 1 function, which will return all of those (, , , ,x ,) */
     function getTotalDreams() external view returns (uint256) {
         return s_totalDreams;
     }

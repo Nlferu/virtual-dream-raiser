@@ -21,18 +21,17 @@ import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/inter
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibleInterface {
-    /* Errors */
+    /// @dev Errors
     error VirtualDreamRewarder__TransferFailed();
     error VirtualDreamRewarder__UpkeepNotNeeded(uint256 currentBalance, uint256 numPlayers, uint256 state);
 
-    /* Type declarations */
+    /// @dev Types
     enum VirtualDreamRewarderState {
         OPEN,
         CALCULATING
     }
 
-    /* State variables */
-    // Chainlink VRF Variabless
+    /// @dev Chainlink VRF Variabless
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     uint64 private immutable i_subscriptionId;
     bytes32 private immutable i_gasLane;
@@ -40,19 +39,19 @@ contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibl
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
-    // Lottery Variables
+    /// @dev Variables
     uint256 private immutable i_interval;
     uint256 private s_lastTimeStamp;
     address private s_recentWinner;
     address payable[] private s_players;
     VirtualDreamRewarderState private s_state;
 
-    /* Events */
+    /// @dev Events
     event PrizePoolAndPlayersUpdated(uint256 amount, address payable[] donators);
     event WinnerRequested(uint256 indexed requestId);
     event WinnerPicked(address indexed winner);
 
-    /* Functions */
+    /// @dev Constructor
     constructor(
         address owner,
         uint64 subscriptionId,
@@ -70,6 +69,10 @@ contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibl
         i_callbackGasLimit = callbackGasLimit;
     }
 
+    //////////////////////////////////// @notice Functions ////////////////////////////////////
+
+    /// @notice Function, which can be called only by Virtual Dream Raiser contract that updates players array and transfer funds designated for lottery
+    /// @param newPlayers New players array coming from Virtual Dream Raiser contract
     function updateVirtualDreamRewarder(address payable[] calldata newPlayers) external payable onlyOwner {
         for (uint i = 0; i < newPlayers.length; i++) {
             s_players.push(newPlayers[i]);
@@ -104,8 +107,7 @@ contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibl
     }
 
     /**
-     * @dev Once `checkUpkeep` is returning `true`, this function is called
-     * and it kicks off a Chainlink VRF call to get a random winner.
+     * @dev Once `checkUpkeep` is returning `true`, this function is called and it kicks off a Chainlink VRF call to get a random winner.
      */
     function performUpkeep(bytes calldata /* performData */) external override {
         (bool upkeepNeeded, ) = checkUpkeep("");
@@ -120,8 +122,7 @@ contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibl
     }
 
     /**
-     * @dev This is the function that Chainlink VRF node
-     * calls to send the money to the random winner.
+     * @dev This is the function that Chainlink VRF node calls to send the money to the random winner.
      */
     function fulfillRandomWords(uint256 /* requestId */, uint256[] memory randomWords) internal override {
         uint256 indexOfWinner = randomWords[0] % s_players.length;
@@ -138,7 +139,7 @@ contract VirtualDreamRewarder is Ownable, VRFConsumerBaseV2, AutomationCompatibl
         emit WinnerPicked(recentWinner);
     }
 
-    /** Getter Functions */
+    //////////////////////////////////// @notice Getters ////////////////////////////////////
 
     function getVirtualDreamRewarderState() public view returns (VirtualDreamRewarderState) {
         return s_state;
