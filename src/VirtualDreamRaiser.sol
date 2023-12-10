@@ -242,7 +242,34 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     function checkUpkeep(bytes memory /* checkData */) public view override returns (bool upkeepNeeded, bytes memory /* performData */) {
         bool timePassed = ((block.timestamp - s_lastTimeStamp) > i_interval);
         bool hasDreams = s_totalDreams > 0;
+        bool hasFunders = false;
+        bool hasPrizePool = false;
+
+        if (s_donators.length > 0) {
+            hasFunders = true;
+        }
+
+        if (s_prizePool > 0) {
+            hasPrizePool = true;
+        }
+
+        upkeepNeeded = (timePassed && hasDreams && hasFunders && hasPrizePool);
+
+        return (upkeepNeeded, "0x0");
+    }
+
+    /// @notice Once checkUpkeep() returns "true" this function is called to execute expireDream() and updateVDRewarder() functions
+    function performUpkeep(bytes calldata /* performData */) external override {
+        (bool upkeepNeeded, ) = checkUpkeep("");
+        getAndUpdateRewarderState(i_VDRewarder);
+        bool isRewarderOpen = false;
         bool hasDreamsToExpire = false;
+
+        if (s_state == VirtualDreamRewarderState.OPEN) {
+            isRewarderOpen = true;
+        }
+
+        if (!upkeepNeeded || !isRewarderOpen) revert VDR__UpkeepNotNeeded();
 
         for (uint dreamId = 0; dreamId < s_totalDreams; dreamId++) {
             Dream storage dream = s_dreams[dreamId];
@@ -255,30 +282,17 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
             }
         }
 
-        upkeepNeeded = (timePassed && hasDreams && hasDreamsToExpire);
+        if (hasDreamsToExpire) {
+            for (uint dreamId = 0; dreamId < s_totalDreams; dreamId++) {
+                Dream storage dream = s_dreams[dreamId];
 
-        return (upkeepNeeded, "0x0");
-    }
-
-    /// @notice Once checkUpkeep() returns "true" this function is called to execute expireDream() and updateVDRewarder() functions
-    function performUpkeep(bytes calldata /* performData */) external override {
-        (bool upkeepNeeded, ) = checkUpkeep("");
-        getAndUpdateRewarderState(i_VDRewarder);
-        bool isRewarderOpen = false;
-
-        if (s_state == VirtualDreamRewarderState.OPEN) {
-            isRewarderOpen = true;
-        }
-
-        if (!upkeepNeeded || !isRewarderOpen) revert VDR__UpkeepNotNeeded();
-
-        for (uint dreamId = 0; dreamId < s_totalDreams; dreamId++) {
-            Dream storage dream = s_dreams[dreamId];
-
-            if (dream.idToTimeLeft < block.timestamp) {
-                expireDream(dreamId);
-                updateVDRewarder(i_VDRewarder);
+                if (dream.idToTimeLeft < block.timestamp) {
+                    expireDream(dreamId);
+                    updateVDRewarder(i_VDRewarder);
+                }
             }
+        } else {
+            updateVDRewarder(i_VDRewarder);
         }
     }
 

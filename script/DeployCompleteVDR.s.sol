@@ -10,7 +10,7 @@ import {HelperConfig} from "./HelperConfig.s.sol";
 contract DeployCompleteVDR is Script {
     function run() external returns (VirtualDreamRaiser) {
         HelperConfig helperConfig = new HelperConfig();
-        uint256 interval = 20;
+        uint256 interval = 30;
         address virtualDreamRewarderAddress;
 
         (
