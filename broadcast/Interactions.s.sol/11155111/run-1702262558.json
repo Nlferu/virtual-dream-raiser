@@ -1,0 +1,36 @@
+{
+  "transactions": [
+    {
+      "hash": "0x3b018edcf705a441decec7a580d61b15f77ca7a1716bd1d2ee91f8307af8a202",
+      "transactionType": "CALL",
+      "contractName": "VirtualDreamRaiser",
+      "contractAddress": "0x1aB04E342aBb25E4783515B87Ba52b5fD5888388",
+      "function": "removeFromWhiteList(address)",
+      "arguments": [
+        "0x50e2a33B9E04e78bF1F1d1F94b0be95Be63C23e7"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0x50e2a33b9e04e78bf1f1d1f94b0be95be63c23e7",
+        "to": "0x1ab04e342abb25e4783515b87ba52b5fd5888388",
+        "gas": "0xdeb8",
+        "value": "0x0",
+        "data": "0x01bf664800000000000000000000000050e2a33b9e04e78bf1f1d1f94b0be95be63c23e7",
+        "nonce": "0x10f",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [
+    "0x3b018edcf705a441decec7a580d61b15f77ca7a1716bd1d2ee91f8307af8a202"
+  ],
+  "returns": {},
+  "timestamp": 1702262558,
+  "chain": 11155111,
+  "multi": false,
+  "commit": "4283ba7"
+}

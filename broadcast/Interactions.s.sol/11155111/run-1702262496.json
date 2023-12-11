@@ -1,0 +1,36 @@
+{
+  "transactions": [
+    {
+      "hash": "0xb4e45cc148a74df3b8cc3ddbeb679e48d9172450b54f3c92ea65099f9de1be8e",
+      "transactionType": "CALL",
+      "contractName": "VirtualDreamRaiser",
+      "contractAddress": "0x1aB04E342aBb25E4783515B87Ba52b5fD5888388",
+      "function": "addToWhiteList(address)",
+      "arguments": [
+        "0x50e2a33B9E04e78bF1F1d1F94b0be95Be63C23e7"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0x50e2a33b9e04e78bf1f1d1f94b0be95be63c23e7",
+        "to": "0x1ab04e342abb25e4783515b87ba52b5fd5888388",
+        "gas": "0x119c6",
+        "value": "0x0",
+        "data": "0x47ee039400000000000000000000000050e2a33b9e04e78bf1f1d1f94b0be95be63c23e7",
+        "nonce": "0x10e",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [
+    "0xb4e45cc148a74df3b8cc3ddbeb679e48d9172450b54f3c92ea65099f9de1be8e"
+  ],
+  "returns": {},
+  "timestamp": 1702262496,
+  "chain": 11155111,
+  "multi": false,
+  "commit": "4283ba7"
+}

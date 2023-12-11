@@ -109,3 +109,65 @@ contract FundSubscription is Script {
         fundSubscriptionUsingConfig();
     }
 }
+
+error VDR__UpdateWhiteListFailed();
+error VDR__WithdrawDonatesFailed();
+
+contract AddWalletToWhiteList is Script {
+    address vdr = 0x1aB04E342aBb25E4783515B87Ba52b5fD5888388;
+    address wallet = 0x50e2a33B9E04e78bF1F1d1F94b0be95Be63C23e7;
+
+    function addWallet(address virtualDreamRaiser, address walletToAdd, uint256 deployerKey) public {
+        vm.startBroadcast(deployerKey);
+        (bool success, ) = virtualDreamRaiser.call(abi.encodeWithSignature("addToWhiteList(address)", walletToAdd));
+        if (!success) revert VDR__UpdateWhiteListFailed();
+        vm.stopBroadcast();
+    }
+
+    function run() external {
+        HelperConfig helperConfig = new HelperConfig();
+
+        (, , , , , , uint256 deployerKey) = helperConfig.activeNetworkConfig();
+
+        addWallet(vdr, wallet, deployerKey);
+    }
+}
+
+contract RemoveWalletFromWhiteList is Script {
+    address vdr = 0x1aB04E342aBb25E4783515B87Ba52b5fD5888388;
+    address wallet = 0x50e2a33B9E04e78bF1F1d1F94b0be95Be63C23e7;
+
+    function removeWallet(address virtualDreamRaiser, address walletToRemove, uint256 deployerKey) public {
+        vm.startBroadcast(deployerKey);
+        (bool success, ) = virtualDreamRaiser.call(abi.encodeWithSignature("removeFromWhiteList(address)", walletToRemove));
+        if (!success) revert VDR__UpdateWhiteListFailed();
+        vm.stopBroadcast();
+    }
+
+    function run() external {
+        HelperConfig helperConfig = new HelperConfig();
+
+        (, , , , , , uint256 deployerKey) = helperConfig.activeNetworkConfig();
+
+        removeWallet(vdr, wallet, deployerKey);
+    }
+}
+
+contract WithdrawDonates is Script {
+    address vdr = 0x1aB04E342aBb25E4783515B87Ba52b5fD5888388;
+
+    function withdrawDonates(address virtualDreamRaiser, uint256 deployerKey) public {
+        vm.startBroadcast(deployerKey);
+        (bool success, ) = virtualDreamRaiser.call(abi.encodeWithSignature("withdrawDonates()"));
+        if (!success) revert VDR__WithdrawDonatesFailed();
+        vm.stopBroadcast();
+    }
+
+    function run() external {
+        HelperConfig helperConfig = new HelperConfig();
+
+        (, , , , , , uint256 deployerKey) = helperConfig.activeNetworkConfig();
+
+        withdrawDonates(vdr, deployerKey);
+    }
+}

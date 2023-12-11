@@ -40,17 +40,34 @@ ifeq ($(findstring --network sepolia,$(ARGS)),--network sepolia)
 	NETWORK_ARGS:= --rpc-url $(SEPOLIA_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 endif
 
+# Deploy VirtualDreamRaiser contract
 deploy:
 	@forge script script/DeployVDR.s.sol:DeployVDR $(NETWORK_ARGS)
 
+# Deploy both VirtualDreamRewarder contract first and then VirtualDreamRaiser contract (using correct VirtualDreamRewarder address deployed before)
 deployAll:
 	@forge script script/DeployCompleteVDR.s.sol:DeployCompleteVDR $(NETWORK_ARGS)
 
+# Create subscription on proper chain for VRF
 createSub:
 	@forge script script/Interactions.s.sol:CreateSubscription $(NETWORK_ARGS)
 
+# Add consumer on proper chain for VRF
 addConsumer:
 	@forge script script/Interactions.s.sol:AddConsumer $(NETWORK_ARGS)
 
+# Fund proper subscription on proper chain for VRF
 fundSub:
 	@forge script script/Interactions.s.sol:FundSubscription $(NETWORK_ARGS)
+
+# Add wallet to white list for VirtualDreamRaiser
+addWallet:
+	@forge script script/Interactions.s.sol:AddWalletToWhiteList $(NETWORK_ARGS)
+
+# Remove wallet from white list for VirtualDreamRaiser
+removeWallet:
+	@forge script script/Interactions.s.sol:RemoveWalletFromWhiteList $(NETWORK_ARGS)
+
+# Withdraw donates from VirtualDreamRaiser
+withdrawDonates:
+	@forge script script/Interactions.s.sol:WithdrawDonates $(NETWORK_ARGS)
