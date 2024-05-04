@@ -177,7 +177,7 @@ contract VirtualDreamRaiser is Ownable, ReentrancyGuard, AutomationCompatibleInt
     /// @notice Function, which is checking current state of VirtualDreamRewarder contract
     /// @param virtualDreamRewarder VirtualDreamRewarder contract address, which will handle lottery for dreams funders
     function getAndUpdateRewarderState(address virtualDreamRewarder) internal {
-        (bool checkingState, bytes memory data) = virtualDreamRewarder.call(abi.encodeWithSignature("getVirtualDreamRewarderState()"));
+        (bool checkingState, bytes memory data) = virtualDreamRewarder.staticcall(abi.encodeWithSignature("getVirtualDreamRewarderState()"));
         if (!checkingState) revert VDR__CheckingStateFailed();
         VirtualDreamRewarderState state = abi.decode(data, (VirtualDreamRewarderState));
         if (state == VirtualDreamRewarderState.CALCULATING) {
